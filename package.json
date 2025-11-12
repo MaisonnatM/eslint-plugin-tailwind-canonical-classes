@@ -25,12 +25,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxencemaisonnat/eslint-plugin-tailwind-canonical-classes.git"
+    "url": "https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes.git"
   },
   "bugs": {
-    "url": "https://github.com/maxencemaisonnat/eslint-plugin-tailwind-canonical-classes/issues"
+    "url": "https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues"
   },
-  "homepage": "https://github.com/maxencemaisonnat/eslint-plugin-tailwind-canonical-classes#readme",
+  "homepage": "https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes#readme",
   "engines": {
     "node": ">=18.0.0"
   },
