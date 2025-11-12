@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-tailwind-canonical-classes",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ESLint plugin to enforce canonical Tailwind CSS class names using Tailwind CSS v4's canonicalization API",
   "type": "module",
   "main": "index.js",
