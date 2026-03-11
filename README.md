@@ -54,25 +54,32 @@ pnpm add -D eslint-plugin-tailwind-canonical-classes @tailwindcss/node
 ### Requirements
 
 - **Node.js** >= 18.0.0
-- **ESLint** >= 8.0.0
+- **ESLint** 8, 9, or 10
 - **Tailwind CSS** v4
 - **@tailwindcss/node** package
+
+### ESLint Version Compatibility
+
+| ESLint Version | Flat Config (`eslint.config.*`) | Legacy Config (`.eslintrc.*`) |
+|:--------------:|:-------------------------------:|:-----------------------------:|
+| 8.x            | Supported                       | Supported                     |
+| 9.x            | Supported                       | Supported                     |
+| 10.x           | Supported                       | **Not available** (removed by ESLint) |
+
+> **Note:** ESLint 10 removes `.eslintrc` support entirely. If you are upgrading to ESLint 10, you must migrate to flat config.
 
 ## 🚀 Quick Start
 
 1. **Install the plugin** (see [Installation](#-installation))
 
-2. **Add to your ESLint config**:
+2. **Add to your ESLint config** (`eslint.config.mjs`):
 
-   **Flat Config (ESLint 9+)** - `eslint.config.mjs`:
    ```javascript
    import tailwindCanonicalClasses from 'eslint-plugin-tailwind-canonical-classes';
 
    export default [
+     ...tailwindCanonicalClasses.configs['flat/recommended'],
      {
-       plugins: {
-         'tailwind-canonical-classes': tailwindCanonicalClasses,
-       },
        rules: {
          'tailwind-canonical-classes/tailwind-canonical-classes': [
            'warn',
@@ -85,21 +92,6 @@ pnpm add -D eslint-plugin-tailwind-canonical-classes @tailwindcss/node
    ];
    ```
 
-   **Legacy Config** - `.eslintrc.js`:
-   ```javascript
-   module.exports = {
-     plugins: ['tailwind-canonical-classes'],
-     rules: {
-       'tailwind-canonical-classes/tailwind-canonical-classes': [
-         'warn',
-         {
-           cssPath: './app/styles/globals.css',
-         },
-       ],
-     },
-   };
-   ```
-
 3. **Run ESLint**:
    ```bash
    npx eslint . --fix
@@ -107,16 +99,16 @@ pnpm add -D eslint-plugin-tailwind-canonical-classes @tailwindcss/node
 
 ## ⚙️ Configuration
 
-### Flat Config (ESLint 9+)
+### Flat Config (ESLint 8+) — Recommended
+
+Using the built-in `flat/recommended` config:
 
 ```javascript
 import tailwindCanonicalClasses from 'eslint-plugin-tailwind-canonical-classes';
 
 export default [
+  ...tailwindCanonicalClasses.configs['flat/recommended'],
   {
-    plugins: {
-      'tailwind-canonical-classes': tailwindCanonicalClasses,
-    },
     rules: {
       'tailwind-canonical-classes/tailwind-canonical-classes': [
         'warn', // or 'error'
@@ -131,7 +123,31 @@ export default [
 ];
 ```
 
-### Legacy Config (.eslintrc.js)
+Or with manual plugin registration:
+
+```javascript
+import tailwindCanonicalClasses from 'eslint-plugin-tailwind-canonical-classes';
+
+export default [
+  {
+    plugins: {
+      'tailwind-canonical-classes': tailwindCanonicalClasses,
+    },
+    rules: {
+      'tailwind-canonical-classes/tailwind-canonical-classes': [
+        'warn',
+        {
+          cssPath: './app/styles/globals.css',
+        },
+      ],
+    },
+  },
+];
+```
+
+### Legacy Config (.eslintrc.js) — ESLint 8/9 only
+
+> **Deprecated:** Legacy config (`.eslintrc`) is not supported by ESLint 10. Migrate to flat config above.
 
 ```javascript
 module.exports = {

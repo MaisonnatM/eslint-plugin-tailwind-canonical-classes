@@ -49,7 +49,7 @@
     "release": "semantic-release"
   },
   "peerDependencies": {
-    "eslint": ">=8.0.0"
+    "eslint": "^8.0.0 || ^9.0.0 || ^10.0.0"
   },
   "dependencies": {
     "@tailwindcss/node": "^4.0.0",

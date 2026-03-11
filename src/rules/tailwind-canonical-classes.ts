@@ -185,11 +185,13 @@ const rule: Rule.RuleModule = {
     ],
   },
   create(context: Rule.RuleContext) {
+    const sourceCode = context.sourceCode ?? context.getSourceCode();
+    const cwd = context.cwd ?? (context as any).getCwd?.() ?? process.cwd();
     const options = context.options[0] as RuleOptions | undefined;
 
     if (!options || !options.cssPath) {
       context.report({
-        node: context.getSourceCode().ast,
+        node: sourceCode.ast,
         messageId: 'cssNotFound',
         data: {
           path: 'not specified',
@@ -202,7 +204,7 @@ const rule: Rule.RuleModule = {
     if (path.isAbsolute(options.cssPath)) {
       cssPath = path.normalize(options.cssPath);
     } else {
-      cssPath = path.normalize(path.resolve(process.cwd(), options.cssPath));
+      cssPath = path.normalize(path.resolve(cwd, options.cssPath));
     }
 
     const rootFontSize = options.rootFontSize ?? 16;
@@ -216,7 +218,7 @@ const rule: Rule.RuleModule = {
 
     if (!fs.existsSync(cssPath)) {
       context.report({
-        node: context.getSourceCode().ast,
+        node: sourceCode.ast,
         messageId: 'cssNotFound',
         data: {
           path: cssPath,
@@ -234,7 +236,6 @@ const rule: Rule.RuleModule = {
           return;
         }
 
-        const sourceCode = context.getSourceCode();
         const sourceText = sourceCode.getText();
 
         const staticValue = extractStaticValue(node.value);
