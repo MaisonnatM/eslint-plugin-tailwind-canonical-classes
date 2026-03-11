@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RuleTester } from 'eslint';
-import { getTestCssPath, mockCanonicalizations } from './test-utils.js';
+import { getTestCssPath, mockCanonicalizations, getRuleTesterConfig } from './test-utils.js';
 
 // Mock the synckit createSyncFn to return a synchronous function that mimics the worker
 const mockCanonicalizeSync = vi.hoisted(() => {
@@ -37,17 +37,7 @@ describe('tailwind-canonical-classes', () => {
     });
   });
 
-  const ruleTester = new RuleTester({
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'module',
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
-  });
+  const ruleTester = new RuleTester(getRuleTesterConfig());
 
   ruleTester.run('tailwind-canonical-classes', tailwindCanonicalClasses, {
     valid: [

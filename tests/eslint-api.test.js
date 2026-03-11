@@ -3,6 +3,7 @@ import { ESLint } from 'eslint';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import plugin from '../lib/index.js';
+import { eslintMajor } from './test-utils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cssPath = path.resolve(__dirname, 'fixtures/tailwind.css');
@@ -15,7 +16,7 @@ const baseLanguageOptions = {
   },
 };
 
-describe('ESLint API integration with flat config', () => {
+describe.skipIf(eslintMajor < 9)('ESLint API integration with flat config', () => {
   it('loads the plugin via flat config and reports non-canonical classes', async () => {
     const eslint = new ESLint({
       overrideConfigFile: true,

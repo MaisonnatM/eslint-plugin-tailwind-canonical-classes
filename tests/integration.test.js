@@ -1,22 +1,12 @@
 import { describe } from 'vitest';
 import { RuleTester } from 'eslint';
-import { getTestCssPath } from './test-utils.js';
+import { getTestCssPath, getRuleTesterConfig } from './test-utils.js';
 import tailwindCanonicalClasses from '../lib/rules/tailwind-canonical-classes.js';
 
 describe('tailwind-canonical-classes (Integration)', () => {
   const cssPath = getTestCssPath();
 
-  const ruleTester = new RuleTester({
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'module',
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
-  });
+  const ruleTester = new RuleTester(getRuleTesterConfig());
 
   ruleTester.run('tailwind-canonical-classes', tailwindCanonicalClasses, {
     valid: [
