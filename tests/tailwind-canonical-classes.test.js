@@ -112,6 +112,12 @@ describe('tailwind-canonical-classes', () => {
         code: '<div className={cn(condition || "w-4")}>Content</div>',
         options: [{ cssPath }],
       },
+      // Non-existent relative CSS path should silently disable the rule in
+      // monorepos (walk-up tried, found nothing — file is in unrelated project)
+      {
+        code: '<div className="w-4">Content</div>',
+        options: [{ cssPath: 'non/existent/path.css' }],
+      },
     ],
 
     invalid: [

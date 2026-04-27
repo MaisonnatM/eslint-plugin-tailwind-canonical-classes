@@ -201,6 +201,7 @@ const rule: Rule.RuleModule = {
     }
 
     let cssPath: string;
+    let resolvedViaWalkUp = false;
     if (path.isAbsolute(options.cssPath)) {
       cssPath = path.normalize(options.cssPath);
     } else {
@@ -211,6 +212,7 @@ const rule: Rule.RuleModule = {
       // the wrong location.  When that happens, walk up from the file being
       // linted until we find a directory that contains the CSS file.
       if (!fs.existsSync(cssPath)) {
+        resolvedViaWalkUp = true;
         const filename =
           context.filename ?? (context as any).getFilename?.();
         if (filename) {
@@ -242,6 +244,12 @@ const rule: Rule.RuleModule = {
     ];
 
     if (!fs.existsSync(cssPath)) {
+      // When the walk-up was attempted and still found nothing, the linted file
+      // likely lives in an unrelated project inside the monorepo — silently
+      // disable the rule instead of reporting an error on every file.
+      if (resolvedViaWalkUp) {
+        return {};
+      }
       context.report({
         node: sourceCode.ast,
         messageId: 'cssNotFound',
