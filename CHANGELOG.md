@@ -1,3 +1,10 @@
+## [1.3.3](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.3.2...v1.3.3) (2026-04-27)
+
+
+### Bug Fixes
+
+* silently disable rule when CSS file is not found in monorepos ([#9](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/9)) ([650f645](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/650f645a1c83b51bc8c55db4f7e9b2be399728c6))
+
 ## [1.3.2](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.3.1...v1.3.2) (2026-03-30)
 
 
