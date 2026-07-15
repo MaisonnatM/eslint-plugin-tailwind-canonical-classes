@@ -1,5 +1,6 @@
 import eslintPkg from 'eslint/package.json' with { type: 'json' };
 import svelteParser from 'svelte-eslint-parser';
+import vueParser from 'vue-eslint-parser';
 
 export const eslintMajor = parseInt(eslintPkg.version.split('.')[0], 10);
 
@@ -52,6 +53,26 @@ export function getSvelteRuleTesterConfig() {
 
   return {
     parser: svelteParser,
+    parserOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+    },
+  };
+}
+
+export function getVueRuleTesterConfig() {
+  if (eslintMajor >= 9) {
+    return {
+      languageOptions: {
+        parser: vueParser,
+        ecmaVersion: 2022,
+        sourceType: 'module',
+      },
+    };
+  }
+
+  return {
+    parser: vueParser,
     parserOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

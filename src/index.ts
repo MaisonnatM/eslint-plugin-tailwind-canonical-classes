@@ -43,6 +43,21 @@ Object.assign(plugin.configs!, {
     },
   ],
 
+  'flat/vue': [
+    {
+      files: ['**/*.vue'],
+      languageOptions: {
+        parser: require('vue-eslint-parser'),
+      },
+      plugins: {
+        'tailwind-canonical-classes': plugin,
+      },
+      rules: {
+        'tailwind-canonical-classes/tailwind-canonical-classes': 'warn',
+      },
+    },
+  ],
+
   recommended: {
     plugins: ['tailwind-canonical-classes'],
     rules: {
