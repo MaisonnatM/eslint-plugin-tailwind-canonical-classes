@@ -75,7 +75,7 @@ export function getVueRuleTesterConfig() {
   }
 
   return {
-    parser: vueParser,
+    parser: require.resolve('vue-eslint-parser'),
     parserOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
