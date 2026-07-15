@@ -24,7 +24,7 @@
 
 ## ✨ Features
 
-- 🔍 **Automatic Detection**: Automatically detects non-canonical Tailwind CSS class names in JSX/TSX and Svelte files
+- 🔍 **Automatic Detection**: Automatically detects non-canonical Tailwind CSS class names in JSX/TSX, Svelte, and Vue files
 - 🔧 **Auto-fix Support**: Automatically fixes non-canonical classes using ESLint's auto-fix feature
 - 🎯 **Tailwind CSS v4 Integration**: Uses Tailwind CSS v4's official `canonicalizeCandidates` API
 - 📝 **Multiple Format Support**: Works with string literals, template literals, and JSX expressions
@@ -58,6 +58,7 @@ pnpm add -D eslint-plugin-tailwind-canonical-classes @tailwindcss/node
 - **Tailwind CSS** v4
 - **@tailwindcss/node** package
 - **svelte-eslint-parser** (optional, required for Svelte support)
+- **vue-eslint-parser** (optional, required for Vue support)
 
 ### ESLint Version Compatibility
 
@@ -145,6 +146,34 @@ export default [
         'warn',
         {
           cssPath: './src/app.css',
+        },
+      ],
+    },
+  },
+];
+```
+
+### Vue (Flat Config)
+
+Install the Vue parser alongside the plugin:
+
+```bash
+npm install --save-dev vue-eslint-parser
+```
+
+Then extend the built-in config:
+
+```javascript
+import tailwindCanonicalClasses from 'eslint-plugin-tailwind-canonical-classes';
+
+export default [
+  ...tailwindCanonicalClasses.configs['flat/vue'],
+  {
+    rules: {
+      'tailwind-canonical-classes/tailwind-canonical-classes': [
+        'warn',
+        {
+          cssPath: './src/style.css',
         },
       ],
     },
@@ -331,6 +360,7 @@ function Button({ variant, className }) {
    - JSX `className` attributes (string literals, template literals, JSX expressions)
    - Standalone script-level utility function calls (e.g. `cn()`, `clsx()`) outside class attributes
    - Svelte `class` attributes (static literals and mustache `cn()` / `clsx()` calls)
+   - Vue `class`, `:class`, and `v-bind:class` attributes (static literals and `cn()` / `clsx()` calls)
    - Utility function calls inside class attributes — only string literal arguments are checked
 3. **Canonicalize**: For each class, it uses Tailwind's `canonicalizeCandidates` to find the canonical form
 4. **Report & Fix**: If a non-canonical class is found, it reports an error/warning and can auto-fix it
@@ -342,7 +372,8 @@ function Button({ variant, className }) {
 - **CSS file accessibility**: CSS file must be accessible from the ESLint process
 - **Template literals**: Template literals with expressions are partially supported (only static parts are checked)
 - **Utility functions**: Only string literal arguments are checked; dynamic expressions, variables, and conditional logic within utility functions are skipped
-- **Framework parsers**: `flat/svelte` requires `svelte-eslint-parser`
+- **Framework parsers**: `flat/svelte` and `flat/vue` require `svelte-eslint-parser` and `vue-eslint-parser` respectively
+- **Vue `:class` object/array forms**: Object and array `:class` bindings (for example `{ 'w-4': true }` or `['w-4', dynamic]`) are skipped
 
 ## 🐛 Troubleshooting
 
