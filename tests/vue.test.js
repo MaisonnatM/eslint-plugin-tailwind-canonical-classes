@@ -53,7 +53,9 @@ describe('tailwind-canonical-classes (Vue)', () => {
       },
       {
         ...vueFile,
-        code: `<script setup>
+        // Plain <script> instead of <script setup>: vue-eslint-parser + ESLint 10
+        // RuleTester crashes on script setup (scopeManager.addGlobals). Behavior under test is the same.
+        code: `<script>
 cn('w-4');
 </script>
 <template><div>Content</div></template>`,
@@ -100,11 +102,11 @@ cn('w-4');
       },
       {
         ...vueFile,
-        code: `<script setup>
+        code: `<script>
 cn('w-[16px]');
 </script>
 <template><div>Content</div></template>`,
-        output: `<script setup>
+        output: `<script>
 cn('w-4');
 </script>
 <template><div>Content</div></template>`,
@@ -118,13 +120,13 @@ cn('w-4');
       },
       {
         ...vueFile,
-        code: `<script setup>
+        code: `<script>
 function getClasses() {
   return cn('w-[16px]');
 }
 </script>
 <template><div>Content</div></template>`,
-        output: `<script setup>
+        output: `<script>
 function getClasses() {
   return cn('w-4');
 }
@@ -156,11 +158,11 @@ function getClasses() {
       },
       {
         ...vueFile,
-        code: `<script setup>
+        code: `<script>
 cn('w-[16px]');
 </script>
 <template><div :class="cn('h-[32px]')">Content</div></template>`,
-        output: `<script setup>
+        output: `<script>
 cn('w-4');
 </script>
 <template><div :class="cn('h-8')">Content</div></template>`,
