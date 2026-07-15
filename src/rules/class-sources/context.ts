@@ -128,10 +128,6 @@ export function setupRuleContext(
   };
 }
 
-export function getRuleCwd(context: Rule.RuleContext): string {
-  return context.cwd ?? (context as Rule.RuleContext & { getCwd?: () => string }).getCwd?.() ?? process.cwd();
-}
-
 export function getSourceCode(context: Rule.RuleContext) {
   return context.sourceCode ?? context.getSourceCode();
 }

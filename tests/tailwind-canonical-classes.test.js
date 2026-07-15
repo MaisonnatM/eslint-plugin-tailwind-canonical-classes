@@ -1,24 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import './synckit-mock.js';
+import { resetCanonicalizeMock } from './synckit-mock.js';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { RuleTester } from 'eslint';
-import { getTestCssPath, mockCanonicalizations, getRuleTesterConfig } from './test-utils.js';
-
-// Mock the synckit createSyncFn to return a synchronous function that mimics the worker
-const mockCanonicalizeSync = vi.hoisted(() => {
-  return vi.fn((cssContent, basePath, candidates, options = {}) => {
-    // Simulate the worker's canonicalization logic
-    return candidates.map((candidate) => {
-      if (mockCanonicalizations[candidate]) {
-        return mockCanonicalizations[candidate];
-      }
-      return candidate;
-    });
-  });
-});
-
-vi.mock('synckit', () => ({
-  createSyncFn: vi.fn(() => mockCanonicalizeSync),
-  runAsWorker: vi.fn(),
-}));
+import { getTestCssPath, getRuleTesterConfig } from './test-utils.js';
 
 import tailwindCanonicalClasses from '../lib/rules/tailwind-canonical-classes.js';
 
@@ -26,15 +10,7 @@ describe('tailwind-canonical-classes', () => {
   const cssPath = getTestCssPath();
 
   beforeEach(() => {
-    mockCanonicalizeSync.mockClear();
-    mockCanonicalizeSync.mockImplementation((cssContent, basePath, candidates, options = {}) => {
-      return candidates.map((candidate) => {
-        if (mockCanonicalizations[candidate]) {
-          return mockCanonicalizations[candidate];
-        }
-        return candidate;
-      });
-    });
+    resetCanonicalizeMock();
   });
 
   const ruleTester = new RuleTester(getRuleTesterConfig());

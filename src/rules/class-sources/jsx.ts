@@ -1,66 +1,55 @@
+import { buildClassSourcesFromCallExpression } from './call-expression.js';
 import {
   extractStaticValue,
-  extractStringArgsFromCallExpression,
   getQuoteChar,
   joinClasses,
   splitClasses,
 } from './estree.js';
 import type { CanonicalizationContext, ClassSource } from './types.js';
+import type { Rule } from 'eslint';
 
 export function collectJsxClassNameSources(
-  node: any,
+  node: unknown,
   ctx: CanonicalizationContext,
 ): ClassSource[] {
-  const staticValue = node.value ? extractStaticValue(node.value) : null;
+  const attr = node as {
+    value?: unknown;
+  };
+
+  const staticValue = attr.value ? extractStaticValue(attr.value) : null;
   if (staticValue !== null) {
     const classes = splitClasses(staticValue);
     if (classes.length === 0) {
       return [];
     }
 
-    const valueNode = node.value;
+    const valueNode = attr.value as { range?: [number, number] } | undefined;
     if (!valueNode?.range) {
       return [];
     }
 
-    const source = buildStaticJsxSource(node, valueNode, classes, ctx.sourceText);
+    const source = buildStaticJsxSource(
+      node,
+      valueNode,
+      classes,
+      ctx.sourceText,
+    );
     return source ? [source] : [];
   }
 
-  if (node.value?.type === 'JSXExpressionContainer') {
-    const expr = node.value.expression;
-    const callExprData = extractStringArgsFromCallExpression(
-      expr,
-      ctx.calleeFunctions,
-    );
-    if (!callExprData) {
-      return [];
-    }
-
-    return callExprData.args
-      .filter((arg) => arg.node.range)
-      .map((arg) => ({
-        reportNode: arg.node,
-        classes: arg.classes,
-        fixRange: arg.node.range as [number, number],
-        cssNotFoundNode: node,
-        buildFix: (fixedClasses: string[]) => {
-          const quoteChar = getQuoteChar(
-            ctx.sourceText,
-            arg.node.range[0],
-            arg.node.range[1],
-          );
-          return `${quoteChar}${joinClasses(fixedClasses)}${quoteChar}`;
-        },
-      }));
+  const value = attr.value as { type?: string; expression?: unknown } | undefined;
+  if (value?.type === 'JSXExpressionContainer') {
+    return buildClassSourcesFromCallExpression(value.expression, ctx, {
+      cssNotFoundNode: node as Rule.Node,
+    });
   }
 
   return [];
 }
 
 function buildStaticJsxSource(
-  node: any,
-  valueNode: any,
+  node: unknown,
+  valueNode: { type?: string; range?: [number, number]; expression?: { type?: string } },
   classes: string[],
   sourceText: string,
 ): ClassSource | null {
@@ -70,14 +59,14 @@ function buildStaticJsxSource(
 
   if (valueNode.type === 'Literal') {
     return {
-      reportNode: node,
+      reportNode: node as Rule.Node,
       classes,
       fixRange: valueNode.range,
       buildFix: (fixedClasses) => {
         const quoteChar = getQuoteChar(
           sourceText,
-          valueNode.range[0],
-          valueNode.range[1],
+          valueNode.range![0],
+          valueNode.range![1],
         );
         return `${quoteChar}${joinClasses(fixedClasses)}${quoteChar}`;
       },
@@ -88,7 +77,7 @@ function buildStaticJsxSource(
     const expr = valueNode.expression;
     if (expr?.type === 'TemplateLiteral' && valueNode.range) {
       return {
-        reportNode: node,
+        reportNode: node as Rule.Node,
         classes,
         fixRange: valueNode.range,
         buildFix: (fixedClasses) => `{\`${joinClasses(fixedClasses)}\`}`,
