@@ -30,6 +30,22 @@ describe('plugin export shape', () => {
     expect(configEntry.rules['tailwind-canonical-classes/tailwind-canonical-classes']).toBe('warn');
   });
 
+  it('exports flat/svelte config with svelte parser', () => {
+    expect(plugin.configs['flat/svelte']).toBeDefined();
+
+    const flatConfig = plugin.configs['flat/svelte'];
+    expect(Array.isArray(flatConfig)).toBe(true);
+    expect(flatConfig.length).toBeGreaterThan(0);
+
+    const configEntry = flatConfig[0];
+    expect(configEntry.files).toEqual(['**/*.svelte']);
+    expect(configEntry.languageOptions?.parser).toBeDefined();
+    expect(configEntry.plugins['tailwind-canonical-classes']).toBe(plugin);
+    expect(configEntry.rules['tailwind-canonical-classes/tailwind-canonical-classes']).toBe(
+      'warn',
+    );
+  });
+
   it('exports recommended legacy config', () => {
     const legacyConfig = plugin.configs.recommended;
     expect(legacyConfig).toBeDefined();

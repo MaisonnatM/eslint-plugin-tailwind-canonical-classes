@@ -24,7 +24,7 @@
 
 ## ✨ Features
 
-- 🔍 **Automatic Detection**: Automatically detects non-canonical Tailwind CSS class names in your JSX/TSX files
+- 🔍 **Automatic Detection**: Automatically detects non-canonical Tailwind CSS class names in JSX/TSX and Svelte files
 - 🔧 **Auto-fix Support**: Automatically fixes non-canonical classes using ESLint's auto-fix feature
 - 🎯 **Tailwind CSS v4 Integration**: Uses Tailwind CSS v4's official `canonicalizeCandidates` API
 - 📝 **Multiple Format Support**: Works with string literals, template literals, and JSX expressions
@@ -57,6 +57,7 @@ pnpm add -D eslint-plugin-tailwind-canonical-classes @tailwindcss/node
 - **ESLint** 8, 9, or 10
 - **Tailwind CSS** v4
 - **@tailwindcss/node** package
+- **svelte-eslint-parser** (optional, required for Svelte support)
 
 ### ESLint Version Compatibility
 
@@ -116,6 +117,34 @@ export default [
           cssPath: './app/styles/globals.css', // Required
           rootFontSize: 16, // Optional, default: 16
           calleeFunctions: ['cn', 'clsx'], // Optional, default: ['cn', 'clsx', 'classNames', 'twMerge', 'cva']
+        },
+      ],
+    },
+  },
+];
+```
+
+### Svelte (Flat Config)
+
+Install the Svelte parser alongside the plugin:
+
+```bash
+npm install --save-dev svelte-eslint-parser
+```
+
+Then extend the built-in config:
+
+```javascript
+import tailwindCanonicalClasses from 'eslint-plugin-tailwind-canonical-classes';
+
+export default [
+  ...tailwindCanonicalClasses.configs['flat/svelte'],
+  {
+    rules: {
+      'tailwind-canonical-classes/tailwind-canonical-classes': [
+        'warn',
+        {
+          cssPath: './src/app.css',
         },
       ],
     },
@@ -301,6 +330,7 @@ function Button({ variant, className }) {
 2. **Extract Classes**: It extracts class names from:
    - JSX `className` attributes (string literals, template literals, JSX expressions)
    - Standalone script-level utility function calls (e.g. `cn()`, `clsx()`) outside class attributes
+   - Svelte `class` attributes (static literals and mustache `cn()` / `clsx()` calls)
    - Utility function calls inside class attributes — only string literal arguments are checked
 3. **Canonicalize**: For each class, it uses Tailwind's `canonicalizeCandidates` to find the canonical form
 4. **Report & Fix**: If a non-canonical class is found, it reports an error/warning and can auto-fix it
@@ -312,6 +342,7 @@ function Button({ variant, className }) {
 - **CSS file accessibility**: CSS file must be accessible from the ESLint process
 - **Template literals**: Template literals with expressions are partially supported (only static parts are checked)
 - **Utility functions**: Only string literal arguments are checked; dynamic expressions, variables, and conditional logic within utility functions are skipped
+- **Framework parsers**: `flat/svelte` requires `svelte-eslint-parser`
 
 ## 🐛 Troubleshooting
 

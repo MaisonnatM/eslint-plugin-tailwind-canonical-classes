@@ -28,6 +28,21 @@ Object.assign(plugin.configs!, {
     },
   ],
 
+  'flat/svelte': [
+    {
+      files: ['**/*.svelte'],
+      languageOptions: {
+        parser: require('svelte-eslint-parser'),
+      },
+      plugins: {
+        'tailwind-canonical-classes': plugin,
+      },
+      rules: {
+        'tailwind-canonical-classes/tailwind-canonical-classes': 'warn',
+      },
+    },
+  ],
+
   recommended: {
     plugins: ['tailwind-canonical-classes'],
     rules: {
