@@ -300,7 +300,8 @@ function Button({ variant, className }) {
 1. **Load Design System**: The plugin loads your Tailwind CSS file using `@tailwindcss/node`'s worker API
 2. **Extract Classes**: It extracts class names from:
    - JSX `className` attributes (string literals, template literals, JSX expressions)
-   - Utility function calls (e.g., `cn()`, `clsx()`) - only string literal arguments are checked
+   - Standalone script-level utility function calls (e.g. `cn()`, `clsx()`) outside class attributes
+   - Utility function calls inside class attributes — only string literal arguments are checked
 3. **Canonicalize**: For each class, it uses Tailwind's `canonicalizeCandidates` to find the canonical form
 4. **Report & Fix**: If a non-canonical class is found, it reports an error/warning and can auto-fix it
 
