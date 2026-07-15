@@ -4,8 +4,9 @@ import { collectJsxClassNameSources } from './class-sources/jsx.js';
 import { reportClassSources } from './class-sources/pipeline.js';
 import {
   collectScriptCallExpressionSources,
-  isInsideJsxClassNameAttribute,
+  isInsideFrameworkClassAttribute,
 } from './class-sources/script.js';
+import { collectSvelteClassAttributeSources } from './class-sources/svelte.js';
 import type { RuleOptions } from './class-sources/types.js';
 
 const rule: Rule.RuleModule = {
@@ -76,11 +77,16 @@ const rule: Rule.RuleModule = {
       },
 
       CallExpression(node: any) {
-        if (isInsideJsxClassNameAttribute(node, sourceCode)) {
+        if (isInsideFrameworkClassAttribute(node, sourceCode)) {
           return;
         }
 
         const sources = collectScriptCallExpressionSources(node, ctx);
+        reportClassSources(context, sources, ctx);
+      },
+
+      SvelteAttribute(node: any) {
+        const sources = collectSvelteClassAttributeSources(node, ctx);
         reportClassSources(context, sources, ctx);
       },
     };
