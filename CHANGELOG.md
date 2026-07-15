@@ -1,3 +1,17 @@
+# [1.4.0](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.3.3...v1.4.0) (2026-07-15)
+
+
+### Bug Fixes
+
+* make release OIDC auth actually work ([#18](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/18)) ([40f6a91](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/40f6a91507eb8ef913b696ae798c2568767cb9bc))
+* publish releases via npm trusted publishing (OIDC) ([#16](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/16)) ([eedcaf8](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/eedcaf8d0bb2e018d07d1b62652f5dc6c5b7ef41))
+
+
+### Features
+
+* add Svelte class attribute linting (PR 2) ([#14](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/14)) ([9237d39](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/9237d392515f1e5a3aff383c48a39734814d641b))
+* add Vue class attribute linting (PR 3) ([#15](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/15)) ([94d3163](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/94d3163cfb0f2b9c899e8111d95782061483a18b))
+
 ## [1.3.3](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.3.2...v1.3.3) (2026-04-27)
 
 
