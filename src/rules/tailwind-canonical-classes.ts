@@ -7,6 +7,10 @@ import {
   isInsideFrameworkClassAttribute,
 } from './class-sources/script.js';
 import { collectSvelteClassAttributeSources } from './class-sources/svelte.js';
+import {
+  collectVueClassAttributeSources,
+  wireRuleVisitors,
+} from './class-sources/vue.js';
 import type { RuleOptions } from './class-sources/types.js';
 
 const rule: Rule.RuleModule = {
@@ -63,33 +67,58 @@ const rule: Rule.RuleModule = {
 
     const ctx = setup.context;
 
-    return {
-      JSXAttribute(node: any) {
+    const templateBodyVisitor: Rule.RuleListener = {
+      JSXAttribute(node: unknown) {
+        const attr = node as {
+          name?: { type?: string; name?: string };
+        };
         if (
-          node.name.type !== 'JSXIdentifier' ||
-          node.name.name !== 'className'
+          attr.name?.type !== 'JSXIdentifier' ||
+          attr.name.name !== 'className'
         ) {
           return;
         }
 
-        const sources = collectJsxClassNameSources(node, ctx);
-        reportClassSources(context, sources, ctx);
+        reportClassSources(context, collectJsxClassNameSources(node, ctx), ctx);
       },
 
-      CallExpression(node: any) {
+      SvelteAttribute(node: unknown) {
+        reportClassSources(
+          context,
+          collectSvelteClassAttributeSources(node, ctx),
+          ctx,
+        );
+      },
+
+      VAttribute(node: unknown) {
+        reportClassSources(
+          context,
+          collectVueClassAttributeSources(node, ctx),
+          ctx,
+        );
+      },
+    };
+
+    const scriptVisitor: Rule.RuleListener = {
+      CallExpression(node: unknown) {
         if (isInsideFrameworkClassAttribute(node, sourceCode)) {
           return;
         }
 
-        const sources = collectScriptCallExpressionSources(node, ctx);
-        reportClassSources(context, sources, ctx);
-      },
-
-      SvelteAttribute(node: any) {
-        const sources = collectSvelteClassAttributeSources(node, ctx);
-        reportClassSources(context, sources, ctx);
+        reportClassSources(
+          context,
+          collectScriptCallExpressionSources(node, ctx),
+          ctx,
+        );
       },
     };
+
+    return wireRuleVisitors(
+      context,
+      sourceCode,
+      templateBodyVisitor,
+      scriptVisitor,
+    );
   },
 };
 

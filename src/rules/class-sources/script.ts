@@ -1,5 +1,6 @@
 import { buildClassSourcesFromCallExpression } from './call-expression.js';
 import type { CanonicalizationContext, ClassSource } from './types.js';
+import { isVueClassAttribute } from './vue.js';
 
 type AncestorMatcher = (ancestor: unknown) => boolean;
 
@@ -19,6 +20,7 @@ const CLASS_ATTRIBUTE_MATCHERS: AncestorMatcher[] = [
     const attr = ancestor as { type?: string; key?: { name?: string } };
     return attr.type === 'SvelteAttribute' && attr.key?.name === 'class';
   },
+  isVueClassAttribute,
 ];
 
 export function collectScriptCallExpressionSources(

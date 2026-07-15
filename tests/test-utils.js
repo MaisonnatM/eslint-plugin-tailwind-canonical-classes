@@ -1,6 +1,7 @@
 import eslintPkg from 'eslint/package.json' with { type: 'json' };
 import { createRequire } from 'node:module';
 import svelteParser from 'svelte-eslint-parser';
+import vueParser from 'vue-eslint-parser';
 
 const require = createRequire(import.meta.url);
 
@@ -55,6 +56,26 @@ export function getSvelteRuleTesterConfig() {
 
   return {
     parser: require.resolve('svelte-eslint-parser'),
+    parserOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+    },
+  };
+}
+
+export function getVueRuleTesterConfig() {
+  if (eslintMajor >= 9) {
+    return {
+      languageOptions: {
+        parser: vueParser,
+        ecmaVersion: 2022,
+        sourceType: 'module',
+      },
+    };
+  }
+
+  return {
+    parser: vueParser,
     parserOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

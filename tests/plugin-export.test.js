@@ -46,6 +46,22 @@ describe('plugin export shape', () => {
     );
   });
 
+  it('exports flat/vue config with vue parser', () => {
+    expect(plugin.configs['flat/vue']).toBeDefined();
+
+    const flatConfig = plugin.configs['flat/vue'];
+    expect(Array.isArray(flatConfig)).toBe(true);
+    expect(flatConfig.length).toBeGreaterThan(0);
+
+    const configEntry = flatConfig[0];
+    expect(configEntry.files).toEqual(['**/*.vue']);
+    expect(configEntry.languageOptions?.parser).toBeDefined();
+    expect(configEntry.plugins['tailwind-canonical-classes']).toBe(plugin);
+    expect(configEntry.rules['tailwind-canonical-classes/tailwind-canonical-classes']).toBe(
+      'warn',
+    );
+  });
+
   it('exports recommended legacy config', () => {
     const legacyConfig = plugin.configs.recommended;
     expect(legacyConfig).toBeDefined();
