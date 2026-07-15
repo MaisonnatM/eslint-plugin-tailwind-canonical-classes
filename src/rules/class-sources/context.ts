@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSyncFn } from 'synckit';
-import type { Rule } from 'eslint';
+import type { Rule, SourceCode } from 'eslint';
 import type { CanonicalizationContext, RuleOptions } from './types.js';
 
 const workerPath = fileURLToPath(
@@ -77,12 +77,24 @@ export interface RuleSetupResult {
   context?: CanonicalizationContext;
 }
 
+type LegacyRuleContext = Rule.RuleContext & {
+  getSourceCode?: () => SourceCode;
+  getCwd?: () => string;
+  getFilename?: () => string;
+};
+
+function resolveSourceCode(context: Rule.RuleContext): SourceCode {
+  const legacyContext = context as LegacyRuleContext;
+  return legacyContext.sourceCode ?? legacyContext.getSourceCode!();
+}
+
 export function setupRuleContext(
   context: Rule.RuleContext,
   options: RuleOptions | undefined,
 ): RuleSetupResult {
-  const sourceCode = context.sourceCode ?? context.getSourceCode();
-  const cwd = context.cwd ?? (context as Rule.RuleContext & { getCwd?: () => string }).getCwd?.() ?? process.cwd();
+  const sourceCode = resolveSourceCode(context);
+  const legacyContext = context as LegacyRuleContext;
+  const cwd = legacyContext.cwd ?? legacyContext.getCwd?.() ?? process.cwd();
 
   if (!options?.cssPath) {
     return {
@@ -92,8 +104,7 @@ export function setupRuleContext(
   }
 
   const filename =
-    context.filename ??
-    (context as Rule.RuleContext & { getFilename?: () => string }).getFilename?.();
+    legacyContext.filename ?? legacyContext.getFilename?.();
   const { cssPath, resolvedViaWalkUp } = resolveCssPath(options, cwd, filename);
 
   if (!fs.existsSync(cssPath)) {
@@ -129,5 +140,5 @@ export function setupRuleContext(
 }
 
 export function getSourceCode(context: Rule.RuleContext) {
-  return context.sourceCode ?? context.getSourceCode();
+  return resolveSourceCode(context);
 }

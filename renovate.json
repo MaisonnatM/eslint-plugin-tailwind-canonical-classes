@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)"
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "non-major dependencies",
+      "automerge": false
+    },
+    {
+      "matchPackageNames": [
+        "semantic-release",
+        "@semantic-release/*"
+      ],
+      "groupName": "semantic-release"
+    },
+    {
+      "matchPackageNames": ["@babel/*"],
+      "groupName": "babel"
+    }
+  ]
+}
