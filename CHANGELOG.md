@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.4.0...v1.4.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* lazy-load optional Svelte and Vue ESLint parsers ([#19](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/19)) ([3f92f43](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/3f92f4367cbc3449ef394e7eb4491da096ac0d78))
+
 # [1.4.0](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.3.3...v1.4.0) (2026-07-15)
 
 
