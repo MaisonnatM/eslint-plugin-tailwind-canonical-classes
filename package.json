@@ -49,7 +49,13 @@
     "release": "semantic-release"
   },
   "peerDependencies": {
-    "eslint": "^8.0.0 || ^9.0.0 || ^10.0.0"
+    "eslint": "^8.0.0 || ^9.0.0 || ^10.0.0",
+    "svelte-eslint-parser": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "svelte-eslint-parser": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@tailwindcss/node": "^4.0.0",
@@ -65,6 +71,8 @@
     "@types/node": "^20.0.0",
     "eslint": "^9.0.0",
     "semantic-release": "^24.0.0",
+    "svelte": "^5.56.5",
+    "svelte-eslint-parser": "^1.8.0",
     "typescript": "^5.0.0",
     "vitest": "^4.0.16"
   },

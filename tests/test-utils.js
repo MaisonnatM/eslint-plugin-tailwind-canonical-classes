@@ -1,4 +1,8 @@
 import eslintPkg from 'eslint/package.json' with { type: 'json' };
+import { createRequire } from 'node:module';
+import svelteParser from 'svelte-eslint-parser';
+
+const require = createRequire(import.meta.url);
 
 export const eslintMajor = parseInt(eslintPkg.version.split('.')[0], 10);
 
@@ -34,6 +38,26 @@ export function getRuleTesterConfig() {
       ecmaVersion: 2022,
       sourceType: 'module',
       ecmaFeatures: { jsx: true },
+    },
+  };
+}
+
+export function getSvelteRuleTesterConfig() {
+  if (eslintMajor >= 9) {
+    return {
+      languageOptions: {
+        parser: svelteParser,
+        ecmaVersion: 2022,
+        sourceType: 'module',
+      },
+    };
+  }
+
+  return {
+    parser: require.resolve('svelte-eslint-parser'),
+    parserOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
     },
   };
 }
