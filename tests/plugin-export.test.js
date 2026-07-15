@@ -30,6 +30,12 @@ describe('plugin export shape', () => {
     expect(configEntry.rules['tailwind-canonical-classes/tailwind-canonical-classes']).toBe('warn');
   });
 
+  it('exports flat/recommended without loading framework parsers', () => {
+    const flatConfig = plugin.configs['flat/recommended'];
+    expect(Array.isArray(flatConfig)).toBe(true);
+    expect(flatConfig[0].languageOptions?.parser).toBeUndefined();
+  });
+
   it('exports flat/svelte config with svelte parser', () => {
     expect(plugin.configs['flat/svelte']).toBeDefined();
 
