@@ -1,6 +1,7 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSyncFn } from 'synckit';
@@ -8,9 +9,13 @@ import { statStamp } from './file-stamp.js';
 import type { CanonicalizeInWorker, CanonicalizeResult } from './tailwind-worker.js';
 
 const workerPath = fileURLToPath(new URL('./tailwind-worker.js', import.meta.url));
-const pluginVersion = (
-  createRequire(import.meta.url)('../../package.json') as { version: string }
-).version;
+const require = createRequire(import.meta.url);
+// Answers depend on this plugin and on the Tailwind engine it runs, whatever version the project's CSS imports.
+const engineVersions = [
+  (require('../../package.json') as { version: string }).version,
+  // @tailwindcss/node does not export its package.json; it sits one level above dist/.
+  (require(path.join(path.dirname(require.resolve('@tailwindcss/node')), '../package.json')) as { version: string }).version,
+].join('\0');
 
 type CanonicalizeSync = (
   ...args: Parameters<CanonicalizeInWorker>
@@ -20,40 +25,33 @@ type CanonicalizeSync = (
 let canonicalizeSync: CanonicalizeSync | undefined;
 
 /**
- * Canonical forms for one stylesheet, valid while every file Tailwind read to
- * build it (the stylesheet plus each dependency it reported) is unchanged.
+ * Canonical forms for one stylesheet and root font size, valid while every
+ * file Tailwind read to build the stylesheet is unchanged.
  */
 interface StylesheetCache {
   files: string[];
   stamp: string;
-  key: string;
-  canonicalByRem: Map<number, Map<string, string>>;
+  tablePath: string;
+  table: Map<string, string>;
 }
 
 const stylesheets = new Map<string, StylesheetCache>();
 
-function isPackageRoot(dir: string): boolean {
-  const parent = path.dirname(dir);
-  return (
-    path.basename(parent) === 'node_modules' ||
-    (path.basename(parent).startsWith('@') && path.basename(path.dirname(parent)) === 'node_modules')
+/** Prefers the project's node_modules/.cache, and never creates node_modules where none exists. */
+export function resolveCacheDir(cwd: string): string {
+  const fromEnv = process.env.TAILWIND_CANONICAL_CLASSES_CACHE_DIR;
+  if (fromEnv) {
+    return path.resolve(cwd, fromEnv);
+  }
+  const nodeModules = path.join(cwd, 'node_modules');
+  return path.join(
+    fs.existsSync(nodeModules) ? path.join(nodeModules, '.cache') : os.tmpdir(),
+    'eslint-plugin-tailwind-canonical-classes',
   );
 }
 
-function packageVersionOf(file: string): string {
-  let dir = path.dirname(file);
-  while (!isPackageRoot(dir) && dir !== path.dirname(dir)) {
-    dir = path.dirname(dir);
-  }
-  try {
-    return (JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8')) as { version?: string }).version ?? '';
-  } catch {
-    return '';
-  }
-}
-
-function contentKey(files: string[]): string {
-  const hash = createHash('sha256').update(pluginVersion);
+function tablePathFor(cacheDir: string, files: string[], rem: number): string {
+  const hash = createHash('sha256').update(`${engineVersions}\0${rem}`);
   for (const file of files) {
     hash.update(`\0${file}\0`);
     try {
@@ -61,50 +59,12 @@ function contentKey(files: string[]): string {
     } catch {
       hash.update('missing');
     }
-    if (file.includes(`${path.sep}node_modules${path.sep}`)) {
-      hash.update(`\0${packageVersionOf(file)}`);
-    }
   }
-  return hash.digest('hex');
+  return path.join(cacheDir, `${hash.digest('hex')}.jsonl`);
 }
 
-function readJson<T>(file: string): T | undefined {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf-8')) as T;
-  } catch {
-    return undefined;
-  }
-}
-
-function writeJson(file: string, value: unknown): void {
-  try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    const tmp = `${file}.${randomUUID()}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(value));
-    fs.renameSync(tmp, file);
-  } catch {
-    // An unwritable cache only costs later runs their warm start.
-  }
-}
-
-function loadStylesheet(cacheDir: string, cssPath: string, files: string[]): StylesheetCache {
-  const cache: StylesheetCache = {
-    files,
-    stamp: statStamp(files),
-    key: contentKey(files),
-    canonicalByRem: new Map(),
-  };
-  stylesheets.set(cssPath, cache);
-  writeJson(dependencyManifestPath(cacheDir, cssPath), files);
-  return cache;
-}
-
-function dependencyManifestPath(cacheDir: string, cssPath: string): string {
+function manifestPath(cacheDir: string, cssPath: string): string {
   return path.join(cacheDir, `${createHash('sha256').update(cssPath).digest('hex')}.deps.json`);
-}
-
-function tablePath(cacheDir: string, key: string, rem: number): string {
-  return path.join(cacheDir, `${key}-${rem}.jsonl`);
 }
 
 /** Reads `[class, canonical]` lines; a torn line from a crashed writer is skipped. */
@@ -141,52 +101,74 @@ function appendTable(file: string, entries: Iterable<[string, string]>): void {
   }
 }
 
-function getStylesheet(cacheDir: string, cssPath: string): StylesheetCache {
-  const cached = stylesheets.get(cssPath);
+function openStylesheet(
+  cacheDir: string,
+  files: string[],
+  rem: number,
+  table?: Map<string, string>,
+): StylesheetCache {
+  const tablePath = tablePathFor(cacheDir, files, rem);
+  return { files, stamp: statStamp(files), tablePath, table: table ?? readTable(tablePath) };
+}
+
+/**
+ * The manifest lists the files the worker last reported for `cssPath`, so a
+ * new process can key its table on them before Tailwind starts. Before any
+ * worker answer the list is just the stylesheet, which no table is written under.
+ */
+function getStylesheet(id: string, cacheDir: string, cssPath: string, rem: number): StylesheetCache {
+  const cached = stylesheets.get(id);
   if (cached && statStamp(cached.files) === cached.stamp) {
     return cached;
   }
-  const known = readJson<string[]>(dependencyManifestPath(cacheDir, cssPath)) ?? [cssPath];
-  return loadStylesheet(cacheDir, cssPath, known);
+  let files: string[] = [cssPath];
+  try {
+    files = JSON.parse(fs.readFileSync(manifestPath(cacheDir, cssPath), 'utf-8')) as string[];
+  } catch {
+    // No manifest yet: the first worker answer writes it.
+  }
+  const stylesheet = openStylesheet(cacheDir, files, rem);
+  stylesheets.set(id, stylesheet);
+  return stylesheet;
 }
 
 /**
  * Returns a function mapping each class to its canonical form for `cssPath`.
  * Answers come from memory, then `cacheDir`, then the Tailwind worker; worker
- * answers are written through to `cacheDir` so concurrent linters share them.
+ * answers are appended to `cacheDir` so concurrent linters share them.
  */
 export function createClassCanonicalizer(
   cacheDir: string,
   cssPath: string,
   rem: number,
 ): (candidates: string[]) => string[] {
-  let stylesheet = getStylesheet(cacheDir, cssPath);
-  let canonicalByClass = stylesheet.canonicalByRem.get(rem);
-  if (!canonicalByClass) {
-    canonicalByClass = readTable(tablePath(cacheDir, stylesheet.key, rem));
-    stylesheet.canonicalByRem.set(rem, canonicalByClass);
-  }
-  const table = canonicalByClass;
+  const id = [cacheDir, cssPath, rem].join('\0');
+  let stylesheet = getStylesheet(id, cacheDir, cssPath, rem);
 
   return (candidates) => {
+    const { table } = stylesheet;
     const missing = [...new Set(candidates.filter((candidate) => !table.has(candidate)))];
     if (missing.length > 0) {
       canonicalizeSync ??= createSyncFn<CanonicalizeInWorker>(workerPath);
       const { canonical, files } = canonicalizeSync(cssPath, missing, { rem });
-      missing.forEach((candidate, index) => table.set(candidate, canonical[index]));
+      const answers = missing.map((candidate, index): [string, string] => [candidate, canonical[index]]);
+      answers.forEach(([candidate, value]) => table.set(candidate, value));
 
-      if (files.join('\0') !== stylesheet.files.join('\0')) {
-        // The key changed with the dependency list: the new table file starts with every answer so far.
-        stylesheet = loadStylesheet(cacheDir, cssPath, files);
-        stylesheet.canonicalByRem.set(rem, table);
-        appendTable(tablePath(cacheDir, stylesheet.key, rem), table);
+      if (files.join('\0') === stylesheet.files.join('\0')) {
+        appendTable(stylesheet.tablePath, answers);
       } else {
-        appendTable(
-          tablePath(cacheDir, stylesheet.key, rem),
-          missing.map((candidate, index): [string, string] => [candidate, canonical[index]]),
-        );
+        // `table` holds answers for the current files, so it moves to the table keyed on the list the worker reported.
+        stylesheet = openStylesheet(cacheDir, files, rem, table);
+        stylesheets.set(id, stylesheet);
+        try {
+          fs.mkdirSync(cacheDir, { recursive: true });
+          fs.writeFileSync(manifestPath(cacheDir, cssPath), JSON.stringify(files));
+        } catch {
+          // Without a manifest, the next process re-learns the file list on its first miss.
+        }
+        appendTable(stylesheet.tablePath, table);
       }
     }
-    return candidates.map((candidate) => table.get(candidate)!);
+    return candidates.map((candidate) => stylesheet.table.get(candidate)!);
   };
 }

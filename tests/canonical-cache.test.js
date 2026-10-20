@@ -69,12 +69,22 @@ describe('canonical cache', () => {
 
     expect(canonicalize(['w-[24px]'])).toEqual(['w-6']);
 
-    const table = fs
+    const tables = fs
       .readdirSync(cacheDir)
-      .filter((file) => file.endsWith('-16.json'))
-      .map((file) => JSON.parse(fs.readFileSync(path.join(cacheDir, file), 'utf-8')))
-      .find((entries) => 'w-[24px]' in entries);
-    expect(table).toMatchObject({ 'w-[8px]': 'w-2', 'w-[24px]': 'w-6' });
+      .filter((file) => file.endsWith('.jsonl'))
+      .map((file) =>
+        Object.fromEntries(
+          fs
+            .readFileSync(path.join(cacheDir, file), 'utf-8')
+            .trim()
+            .split('\n')
+            .map((line) => JSON.parse(line)),
+        ),
+      );
+    expect(tables.find((entries) => 'w-[24px]' in entries)).toMatchObject({
+      'w-[8px]': 'w-2',
+      'w-[24px]': 'w-6',
+    });
   });
 
   it('reports a Tailwind failure once per file instead of hiding it', () => {
