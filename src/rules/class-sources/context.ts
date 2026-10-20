@@ -1,8 +1,7 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import type { Rule, SourceCode } from 'eslint';
-import { createClassCanonicalizer } from '../canonical-cache.js';
+import { createClassCanonicalizer, resolveCacheDir } from '../canonical-cache.js';
 import type { CanonicalizationContext, RuleOptions } from './types.js';
 
 export interface ResolvedCssPath {
@@ -114,19 +113,6 @@ export function setupRuleContext(
       ),
     },
   };
-}
-
-// Prefer the project's node_modules/.cache; never create node_modules where none exists.
-function resolveCacheDir(cwd: string): string {
-  const fromEnv = process.env.TAILWIND_CANONICAL_CLASSES_CACHE_DIR;
-  if (fromEnv) {
-    return path.resolve(cwd, fromEnv);
-  }
-  const nodeModules = path.join(cwd, 'node_modules');
-  return path.join(
-    fs.existsSync(nodeModules) ? path.join(nodeModules, '.cache') : os.tmpdir(),
-    'eslint-plugin-tailwind-canonical-classes',
-  );
 }
 
 export function getSourceCode(context: Rule.RuleContext) {
