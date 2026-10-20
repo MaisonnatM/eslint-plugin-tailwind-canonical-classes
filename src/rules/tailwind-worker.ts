@@ -1,25 +1,61 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { runAsWorker } from 'synckit';
-import { __unstable__loadDesignSystem } from '@tailwindcss/node';
+import { __unstable__loadDesignSystem, compile } from '@tailwindcss/node';
+import { statStamp } from './file-stamp.js';
 
-const designSystemCache = new Map<string, any>();
-
-async function canonicalizeInWorker(
-  cssContent: string,
-  basePath: string,
-  candidates: string[],
-  options: { rem?: number } = {}
-): Promise<string[]> {
-  const cacheKey = basePath;
-  
-  let designSystem = designSystemCache.get(cacheKey);
-  
-  if (!designSystem) {
-    designSystem = await __unstable__loadDesignSystem(cssContent, { base: basePath });
-    designSystemCache.set(cacheKey, designSystem);
-  }
-  
-  return designSystem.canonicalizeCandidates(candidates, options);
+interface DesignSystem {
+  canonicalizeCandidates(candidates: string[], options?: { rem?: number }): string[];
 }
 
-runAsWorker(canonicalizeInWorker);
+export interface CanonicalizeResult {
+  canonical: string[];
+  /** The stylesheet and every file Tailwind read while loading it. */
+  files: string[];
+}
 
+export type CanonicalizeInWorker = (
+  cssPath: string,
+  candidates: string[],
+  options: { rem: number },
+) => Promise<CanonicalizeResult>;
+
+interface LoadedStylesheet {
+  files: string[];
+  stamp: string;
+  designSystem: DesignSystem;
+}
+
+const stylesheets = new Map<string, LoadedStylesheet>();
+
+async function loadStylesheet(cssPath: string): Promise<LoadedStylesheet> {
+  const css = fs.readFileSync(cssPath, 'utf-8');
+  const base = path.dirname(cssPath);
+  const dependencies: string[] = [];
+  await compile(css, { base, from: cssPath, onDependency: (file) => dependencies.push(file) });
+  const files = [cssPath, ...new Set(dependencies)];
+  return {
+    files,
+    stamp: statStamp(files),
+    designSystem: await __unstable__loadDesignSystem(css, { base }),
+  };
+}
+
+const canonicalizeInWorker: CanonicalizeInWorker = async (cssPath, candidates, options) => {
+  let stylesheet = stylesheets.get(cssPath);
+  if (!stylesheet || statStamp(stylesheet.files) !== stylesheet.stamp) {
+    stylesheet = await loadStylesheet(cssPath);
+    stylesheets.set(cssPath, stylesheet);
+  }
+  const { designSystem } = stylesheet;
+
+  return {
+    // canonicalizeCandidates dedupes its output, so one call per candidate keeps indexes aligned.
+    canonical: candidates.map(
+      (candidate) => designSystem.canonicalizeCandidates([candidate], options)[0] ?? candidate,
+    ),
+    files: stylesheet.files,
+  };
+};
+
+runAsWorker(canonicalizeInWorker);

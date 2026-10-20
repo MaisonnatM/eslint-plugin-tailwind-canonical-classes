@@ -4,16 +4,10 @@ import {
   joinClasses,
 } from './estree.js';
 import type { CanonicalizationContext, ClassSource } from './types.js';
-import type { Rule } from 'eslint';
-
-export interface CallExpressionSourceOptions {
-  cssNotFoundNode?: Rule.Node;
-}
 
 export function buildClassSourcesFromCallExpression(
   node: unknown,
   ctx: CanonicalizationContext,
-  options: CallExpressionSourceOptions = {},
 ): ClassSource[] {
   const callExprData = extractStringArgsFromCallExpression(
     node,
@@ -29,9 +23,6 @@ export function buildClassSourcesFromCallExpression(
       reportNode: arg.node,
       classes: arg.classes,
       fixRange: arg.node.range as [number, number],
-      ...(options.cssNotFoundNode
-        ? { cssNotFoundNode: options.cssNotFoundNode }
-        : {}),
       buildFix: (fixedClasses: string[]) => {
         const quoteChar = getQuoteChar(
           ctx.sourceText,

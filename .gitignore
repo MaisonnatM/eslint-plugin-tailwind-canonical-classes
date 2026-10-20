@@ -16,3 +16,6 @@ lib/
 
 # Manual testing environment
 test-env/
+
+# Benchmark output
+bench/.out/

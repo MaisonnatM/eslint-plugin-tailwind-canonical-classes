@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.js'],
+    setupFiles: ['tests/setup-cache-dir.js'],
     timeout: 10000,
   },
   esbuild: {

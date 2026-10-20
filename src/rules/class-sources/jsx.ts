@@ -39,9 +39,7 @@ export function collectJsxClassNameSources(
 
   const value = attr.value as { type?: string; expression?: unknown } | undefined;
   if (value?.type === 'JSXExpressionContainer') {
-    return buildClassSourcesFromCallExpression(value.expression, ctx, {
-      cssNotFoundNode: node as Rule.Node,
-    });
+    return buildClassSourcesFromCallExpression(value.expression, ctx);
   }
 
   return [];

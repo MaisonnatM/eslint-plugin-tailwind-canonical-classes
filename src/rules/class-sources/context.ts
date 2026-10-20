@@ -1,35 +1,9 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createSyncFn } from 'synckit';
 import type { Rule, SourceCode } from 'eslint';
+import { createClassCanonicalizer } from '../canonical-cache.js';
 import type { CanonicalizationContext, RuleOptions } from './types.js';
-
-const workerPath = fileURLToPath(
-  new URL('../tailwind-worker.js', import.meta.url),
-);
-
-const canonicalizeSync = createSyncFn(workerPath) as (
-  cssContent: string,
-  basePath: string,
-  candidates: string[],
-  options: { rem?: number },
-) => string[];
-
-function canonicalizeClassesFromFile(
-  cssPath: string,
-  candidates: string[],
-  rootFontSize: number,
-): string[] | null {
-  if (!fs.existsSync(cssPath)) {
-    return null;
-  }
-
-  const cssContent = fs.readFileSync(cssPath, 'utf-8');
-  const basePath = path.dirname(cssPath);
-
-  return canonicalizeSync(cssContent, basePath, candidates, { rem: rootFontSize });
-}
 
 export interface ResolvedCssPath {
   cssPath: string;
@@ -133,10 +107,26 @@ export function setupRuleContext(
       rootFontSize,
       calleeFunctions,
       sourceText: sourceCode.getText(),
-      canonicalizeClasses: (candidates) =>
-        canonicalizeClassesFromFile(cssPath, candidates, rootFontSize),
+      canonicalizeClasses: createClassCanonicalizer(
+        resolveCacheDir(cwd),
+        cssPath,
+        rootFontSize,
+      ),
     },
   };
+}
+
+// Prefer the project's node_modules/.cache; never create node_modules where none exists.
+function resolveCacheDir(cwd: string): string {
+  const fromEnv = process.env.TAILWIND_CANONICAL_CLASSES_CACHE_DIR;
+  if (fromEnv) {
+    return path.resolve(cwd, fromEnv);
+  }
+  const nodeModules = path.join(cwd, 'node_modules');
+  return path.join(
+    fs.existsSync(nodeModules) ? path.join(nodeModules, '.cache') : os.tmpdir(),
+    'eslint-plugin-tailwind-canonical-classes',
+  );
 }
 
 export function getSourceCode(context: Rule.RuleContext) {

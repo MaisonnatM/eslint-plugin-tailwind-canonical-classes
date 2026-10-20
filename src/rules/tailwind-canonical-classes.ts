@@ -101,15 +101,15 @@ const rule: Rule.RuleModule = {
 
     const scriptVisitor: Rule.RuleListener = {
       CallExpression(node: unknown) {
-        if (isInsideFrameworkClassAttribute(node, sourceCode)) {
+        const sources = collectScriptCallExpressionSources(node, ctx);
+        if (
+          sources.length === 0 ||
+          isInsideFrameworkClassAttribute(node, sourceCode)
+        ) {
           return;
         }
 
-        reportClassSources(
-          context,
-          collectScriptCallExpressionSources(node, ctx),
-          ctx,
-        );
+        reportClassSources(context, sources, ctx);
       },
     };
 
