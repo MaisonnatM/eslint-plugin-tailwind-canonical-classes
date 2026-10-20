@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.5.0...v1.6.0) (2026-10-20)
+
+
+### Features
+
+* check cva and tv configs and tw tagged templates ([#24](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/24)) ([943a378](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/943a3788315d75958ddf0e0899899e456e191d58))
+
 # [1.5.0](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.4.4...v1.5.0) (2026-10-20)
 
 
