@@ -28,7 +28,7 @@
 - 🔍 **Automatic Detection**: Automatically detects non-canonical Tailwind CSS class names in JSX/TSX, Svelte, and Vue files
 - 🔧 **Auto-fix Support**: Automatically fixes non-canonical classes using ESLint's auto-fix feature
 - 🎯 **Tailwind CSS v4 Integration**: Uses Tailwind CSS v4's official `canonicalizeCandidates` API
-- 📝 **Multiple Format Support**: Works with string literals, template literals, and JSX expressions
+- 📝 **Multiple Format Support**: Works with string literals, template literals, ternaries, `&&`/`||`, arrays, and object keys
 - 🛠️ **Utility Function Support**: Detects and fixes classes in utility functions like `cn()`, `clsx()`, `classNames()`, `twMerge()`, and `cva()`
 - ⚡ **Zero Config**: Minimal configuration required to get started
 
@@ -43,7 +43,8 @@ Two larger plugins also ship a canonical-classes rule built on the same Tailwind
 | Two classes with the same canonical form (`p-[1rem] p-4`) | Fixes only `p-[1rem]` | Rewrites the wrong classes | Not reported |
 | Rule time, 400 JSX files, 12k class strings, first run | 1.2 s | 1.2 s | 9.8 s |
 | Same, next runs (on-disk cache) | 0.1 s | 1.2 s | 9.8 s |
-| Ternaries, template literals with `${}`, `clsx` object keys, `cva` variants, `tv()`, Vue `:class` object/array bindings | Not checked | Checked | Checked |
+| Ternaries, template literals with `${}`, `clsx` object keys, Vue `:class` object/array bindings | Checked | Checked | Checked |
+| `cva` variants, `tv()`, `` tw`…` `` tagged templates | Not checked | Checked | Checked |
 
 Measured on 2026-10-20 with ESLint 9.39, Tailwind CSS 4.3.3, `eslint-plugin-tailwindcss` 4.4.0, and `eslint-plugin-better-tailwindcss` 4.10.0. Rule time is total lint time minus a run with the rule off, median of five runs.
 
@@ -303,22 +304,23 @@ The plugin supports various class name formats:
    <div className="p-4 m-2">Content</div>
    ```
 
-2. **Template literals** without `${}` expressions:
+2. **Template literals**, including ones with `${}` expressions:
    ```tsx
-   <div className={`p-4 m-2`}>Content</div>
-   // A template literal that contains ${} is skipped entirely
+   <div className={`p-4px ${size} m-2rem`}>Content</div>
+   // A class touching ${} (such as bg-${color}) is only part of a class and is skipped
    ```
 
-3. **JSX expression containers**:
+3. **Conditional expressions, arrays, and object keys**:
    ```tsx
-   <div className={"p-4px"}>Content</div>
+   <div className={active ? "p-4px" : "m-2rem"}>Content</div>
+   <div className={clsx({ "w-[16px]": active }, ["h-[32px]"])}>Content</div>
    ```
 
 4. **Utility functions** (e.g., `cn()`, `clsx()`, `classNames()`, `twMerge()`, `cva()`):
    ```tsx
    <div className={cn("p-4px", "m-2rem")}>Content</div>
    <div className={clsx("w-[16px]", condition && "hidden")}>Content</div>
-   // Only string literal arguments are checked; dynamic expressions are skipped
+   // Variables and other dynamic values are skipped
    ```
 
 ### Real-world Example
@@ -373,11 +375,11 @@ function Button({ variant, className }) {
 
 1. **Load Design System**: The plugin loads your Tailwind CSS file using `@tailwindcss/node`'s worker API
 2. **Extract Classes**: It extracts class names from:
-   - JSX `className` attributes (string literals, template literals, JSX expressions)
+   - JSX `className` attributes
    - Standalone script-level utility function calls (e.g. `cn()`, `clsx()`) outside class attributes
-   - Svelte `class` attributes (static literals and mustache `cn()` / `clsx()` calls)
-   - Vue `class`, `:class`, and `v-bind:class` attributes (static literals and `cn()` / `clsx()` calls)
-   - Utility function calls inside class attributes — only string literal arguments are checked
+   - Svelte `class` attributes, static text and `{...}` expressions
+   - Vue `class`, `:class`, and `v-bind:class` attributes, including object and array bindings
+   - Inside expressions it checks string literals, template literal text, both sides of `? :`, `&&`, and `||`, array elements, object keys, and arguments of nested utility calls
 3. **Canonicalize**: For each class, it uses Tailwind's `canonicalizeCandidates` to find the canonical form
 4. **Report & Fix**: If a non-canonical class is found, it reports an error/warning and can auto-fix it
 
@@ -394,10 +396,9 @@ Set `TAILWIND_CANONICAL_CLASSES_CACHE_DIR` to store the cache somewhere else, fo
 - **Static classes only**: Only works with static class names (no dynamic expressions)
 - **Tailwind CSS v4 required**: Requires Tailwind CSS v4 (not compatible with v3)
 - **CSS file accessibility**: CSS file must be accessible from the ESLint process
-- **Template literals**: Template literals that contain `${}` expressions are skipped
-- **Utility functions**: Only string literal arguments are checked; dynamic expressions, variables, and conditional logic within utility functions are skipped
+- **Template literals**: A class touching a `${}` expression (for example `bg-${color}`) is skipped
+- **Dynamic values**: Variables, computed object keys, and object values are skipped; `cva` variant objects and `tv()` configs are not checked
 - **Framework parsers**: `flat/svelte` and `flat/vue` require `svelte-eslint-parser` and `vue-eslint-parser` respectively
-- **Vue `:class` object/array forms**: Object and array `:class` bindings (for example `{ 'w-4': true }` or `['w-4', dynamic]`) are skipped
 
 ## 🐛 Troubleshooting
 

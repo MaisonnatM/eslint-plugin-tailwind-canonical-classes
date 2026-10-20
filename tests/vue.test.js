@@ -66,6 +66,17 @@ cn('w-4');
     invalid: [
       {
         ...vueFile,
+        code: `<template><div :class="[{ 'w-[16px]': active }, 'h-[32px]', ok ? 'p-[4px]' : '']">Content</div></template>`,
+        output: `<template><div :class="[{ 'w-4': active }, 'h-8', ok ? 'p-1' : '']">Content</div></template>`,
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+          { messageId: 'nonCanonical', data: { original: 'h-[32px]', canonical: 'h-8' } },
+          { messageId: 'nonCanonical', data: { original: 'p-[4px]', canonical: 'p-1' } },
+        ],
+      },
+      {
+        ...vueFile,
         code: `<template><div class="w-[16px]">Content</div></template>`,
         output: `<template><div class="w-4">Content</div></template>`,
         options: [{ cssPath }],

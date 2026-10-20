@@ -94,9 +94,64 @@ describe('tailwind-canonical-classes', () => {
         code: '<div className="w-4">Content</div>',
         options: [{ cssPath: 'non/existent/path.css' }],
       },
+      {
+        code: '<div className={`w-[16px]-${size} ${a}w-[16px]`}>Content</div>',
+        options: [{ cssPath }],
+      },
     ],
 
     invalid: [
+      {
+        code: '<div className={active ? "w-[16px]" : "h-8"}>Content</div>',
+        output: '<div className={active ? "w-4" : "h-8"}>Content</div>',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+        ],
+      },
+      {
+        code: '<div className={`w-[16px] bg-${color} ${size}  h-[32px]`}>Content</div>',
+        output: '<div className={`w-4 bg-${color} ${size}  h-8`}>Content</div>',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+          { messageId: 'nonCanonical', data: { original: 'h-[32px]', canonical: 'h-8' } },
+        ],
+      },
+      {
+        code: '<div className={clsx({ "w-[16px]": active, [dynamic]: true }, ["h-[32px]"])}>Content</div>',
+        output: '<div className={clsx({ "w-4": active, [dynamic]: true }, ["h-8"])}>Content</div>',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+          { messageId: 'nonCanonical', data: { original: 'h-[32px]', canonical: 'h-8' } },
+        ],
+      },
+      {
+        code: 'const classes = cn("p-[4px]", clsx("w-[16px]"));',
+        output: 'const classes = cn("p-1", clsx("w-4"));',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'p-[4px]', canonical: 'p-1' } },
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+        ],
+      },
+      {
+        code: 'const classes = someFn(cn("w-[16px]"));',
+        output: 'const classes = someFn(cn("w-4"));',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+        ],
+      },
+      {
+        code: '<div className={someFn(cn("w-[16px]"))}>Content</div>',
+        output: '<div className={someFn(cn("w-4"))}>Content</div>',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+        ],
+      },
       {
         code: '<div className="w-[16px]">Content</div>',
         output: '<div className="w-4">Content</div>',

@@ -1,4 +1,5 @@
-import { buildClassSourcesFromCallExpression } from './call-expression.js';
+import type * as ESTree from 'estree';
+import { collectClassExpressionSources } from './class-expression.js';
 import { joinClasses, splitClasses } from './estree.js';
 import type { CanonicalizationContext, ClassSource } from './types.js';
 import type { Rule } from 'eslint';
@@ -35,7 +36,7 @@ export function collectSvelteClassAttributeSources(
       type?: string;
       value?: string;
       range?: [number, number];
-      expression?: unknown;
+      expression?: ESTree.Node;
     };
     if (part.type === 'SvelteLiteral') {
       literalRun.push(part);
@@ -45,9 +46,7 @@ export function collectSvelteClassAttributeSources(
     flushLiteralRun();
 
     if (part.type === 'SvelteMustacheTag') {
-      sources.push(
-        ...buildClassSourcesFromCallExpression(part.expression, ctx),
-      );
+      sources.push(...collectClassExpressionSources(part.expression, ctx));
     }
   }
 

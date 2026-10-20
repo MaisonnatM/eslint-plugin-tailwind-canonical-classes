@@ -59,6 +59,16 @@ describe('tailwind-canonical-classes (Svelte)', () => {
     invalid: [
       {
         ...svelteFile,
+        code: '<div class={active ? "w-[16px]" : `h-[32px] ${size}`}>Content</div>',
+        output: '<div class={active ? "w-4" : `h-8 ${size}`}>Content</div>',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+          { messageId: 'nonCanonical', data: { original: 'h-[32px]', canonical: 'h-8' } },
+        ],
+      },
+      {
+        ...svelteFile,
         code: '<div class="w-[16px]">Content</div>',
         output: '<div class="w-4">Content</div>',
         options: [{ cssPath }],
