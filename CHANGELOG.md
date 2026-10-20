@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.4.4...v1.5.0) (2026-10-20)
+
+
+### Features
+
+* check ternaries, template literals with expressions, and object keys ([#22](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/22)) ([78fa1f6](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/78fa1f6a7ff080eb150c076cee4f9fecfde942bd))
+
 ## [1.4.4](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.4.3...v1.4.4) (2026-10-20)
 
 
