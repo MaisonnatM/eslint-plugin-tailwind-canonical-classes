@@ -401,6 +401,8 @@ Set `TAILWIND_CANONICAL_CLASSES_CACHE_DIR` to store the cache somewhere else, fo
 - **CSS file accessibility**: CSS file must be accessible from the ESLint process
 - **Template literals**: A class touching a `${}` expression (for example `bg-${color}`) is skipped
 - **Dynamic values**: Variables, computed object keys, and `clsx` object values are skipped
+- **`cva`/`tv` class objects**: A `clsx`-style object written directly in a `cva` or `tv` config (for example `base: { 'w-4': active }`) is read as config, so its class keys are skipped; wrap it in `clsx()` to have it checked
+- **Tagged templates**: Only `` tw`…` `` and `` tw.<tag>`…` `` match; deeper chains such as `` tw.colors.div`…` `` are skipped
 - **Framework parsers**: `flat/svelte` and `flat/vue` require `svelte-eslint-parser` and `vue-eslint-parser` respectively
 
 ## 🐛 Troubleshooting

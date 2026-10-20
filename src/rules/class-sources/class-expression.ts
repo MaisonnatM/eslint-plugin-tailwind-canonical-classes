@@ -3,6 +3,10 @@ import type * as ESTree from 'estree';
 import { getQuoteChar, joinClasses, splitClasses } from './estree.js';
 import type { CanonicalizationContext, ClassSource } from './types.js';
 
+/**
+ * Returns the name an identifier or member expression ends with: `cn` for
+ * both `cn` and `utils.cn`. Used for callees and for object property keys.
+ */
 function getNameOf(node: ESTree.Node): string | null {
   if (node.type === 'Identifier') {
     return node.name;
@@ -24,8 +28,9 @@ export function getClassFunctionName(
   if (node.type === 'CallExpression') {
     name = getNameOf(node.callee);
   } else if (node.type === 'TaggedTemplateExpression') {
-    const { tag } = node;
-    name = tag.type === 'MemberExpression' ? getNameOf(tag.object) : getNameOf(tag);
+    // Only `tw` and `tw.<tag>`: in `theme.tw` or `tw.colors.div`, `tw` is not the tag function.
+    const target = node.tag.type === 'MemberExpression' ? node.tag.object : node.tag;
+    name = target.type === 'Identifier' ? target.name : null;
   }
   return name !== null && calleeFunctions.includes(name) ? name : null;
 }
@@ -178,23 +183,41 @@ function walkVariantConfig(
     return;
   }
   for (const property of node.properties) {
-    const key = property.type === 'Property' ? getKeyName(property) : null;
-    if (property.type !== 'Property' || key === null || key === 'defaultVariants') {
+    if (property.type !== 'Property') {
       continue;
     }
-    if (key !== 'compoundVariants' && key !== 'compoundSlots') {
+    const key = getKeyName(property);
+    if (key === null || key === 'defaultVariants') {
+      continue;
+    }
+    if (key === 'compoundVariants' || key === 'compoundSlots') {
+      walkCompoundEntries(property.value, ctx, sources);
+    } else {
       walkVariantConfig(property.value, ctx, sources);
+    }
+  }
+}
+
+/** Walks `compoundVariants` or `compoundSlots`, whose entries mix conditions with `class`/`className`. */
+function walkCompoundEntries(
+  node: ESTree.Node,
+  ctx: CanonicalizationContext,
+  sources: ClassSource[],
+): void {
+  if (node.type !== 'ArrayExpression') {
+    return;
+  }
+  for (const entry of node.elements) {
+    if (entry?.type !== 'ObjectExpression') {
       continue;
     }
-    const entries = property.value.type === 'ArrayExpression' ? property.value.elements : [];
-    for (const entry of entries) {
-      if (entry?.type !== 'ObjectExpression') {
+    for (const field of entry.properties) {
+      if (field.type !== 'Property') {
         continue;
       }
-      for (const field of entry.properties) {
-        if (field.type === 'Property' && ['class', 'className'].includes(getKeyName(field) ?? '')) {
-          walkVariantConfig(field.value, ctx, sources);
-        }
+      const key = getKeyName(field);
+      if (key === 'class' || key === 'className') {
+        walkVariantConfig(field.value, ctx, sources);
       }
     }
   }

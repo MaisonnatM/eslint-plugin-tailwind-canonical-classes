@@ -99,12 +99,21 @@ describe('tailwind-canonical-classes', () => {
         options: [{ cssPath }],
       },
       {
-        code: 'const a = css`w-[16px]`; const b = styled.div`h-[32px]`;',
+        code: 'const a = css`w-[16px]`; const b = styled.div`h-[32px]`; const c = tw.colors.div`p-[4px]`; const d = theme.tw`m-[8px]`;',
         options: [{ cssPath }],
       },
     ],
 
     invalid: [
+      {
+        code: 'const badge = cva({ base: "w-[16px]", variants: { tone: { muted: "h-[32px]" } } });',
+        output: 'const badge = cva({ base: "w-4", variants: { tone: { muted: "h-8" } } });',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+          { messageId: 'nonCanonical', data: { original: 'h-[32px]', canonical: 'h-8' } },
+        ],
+      },
       {
         code: `const button = cva("w-[16px]", {
   variants: { size: { sm: "h-[32px]", lg: ["p-[4px]"] } },
