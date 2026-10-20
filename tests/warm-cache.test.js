@@ -10,10 +10,10 @@ describe('warm canonical cache', () => {
   afterAll(() => fs.rmSync(cacheDir, { recursive: true, force: true }));
 
   // A fresh module instance stands in for a new ESLint process: only the disk cache survives.
-  const freshCanonicalizer = async () => {
+  const freshCanonicalizer = async (rem = 16) => {
     vi.resetModules();
     const { createClassCanonicalizer } = await import('../lib/rules/canonical-cache.js');
-    return createClassCanonicalizer(cacheDir, getTestCssPath(), 16);
+    return createClassCanonicalizer(cacheDir, getTestCssPath(), rem);
   };
 
   it('answers from disk without starting Tailwind', async () => {
@@ -24,5 +24,25 @@ describe('warm canonical cache', () => {
     mockCanonicalizeSync.mockClear();
     expect((await freshCanonicalizer())(['h-8', 'w-[16px]'])).toEqual(['h-8', 'w-4']);
     expect(mockCanonicalizeSync).not.toHaveBeenCalled();
+  });
+
+  it('finds the table on disk after re-learning a lost dependency list', async () => {
+    const dependency = path.join(cacheDir, 'theme.css');
+    fs.writeFileSync(dependency, '@theme {}\n');
+    const answer = (cssPath, candidates) => ({
+      canonical: candidates.map((candidate) => (candidate === 'w-[16px]' ? 'w-4' : candidate)),
+      files: [cssPath, dependency],
+    });
+    mockCanonicalizeSync.mockImplementation(answer);
+    (await freshCanonicalizer(20))(['w-[16px]', 'h-8']);
+    for (const file of fs.readdirSync(cacheDir).filter((name) => name.endsWith('.deps.json'))) {
+      fs.rmSync(path.join(cacheDir, file));
+    }
+
+    mockCanonicalizeSync.mockClear();
+    const canonicalize = await freshCanonicalizer(20);
+    expect(canonicalize(['w-[16px]'])).toEqual(['w-4']);
+    expect(canonicalize(['h-8'])).toEqual(['h-8']);
+    expect(mockCanonicalizeSync).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,8 +1,14 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { runAsWorker } from 'synckit';
 import { __unstable__loadDesignSystem, compile } from '@tailwindcss/node';
 import { statStamp } from './file-stamp.js';
+
+// The engine that answers lives in the tailwindcss copy @tailwindcss/node loads; its version keys the cache.
+const enginePackageJson = createRequire(
+  createRequire(import.meta.url).resolve('@tailwindcss/node'),
+).resolve('tailwindcss/package.json');
 
 interface DesignSystem {
   canonicalizeCandidates(candidates: string[], options?: { rem?: number }): string[];
@@ -10,7 +16,7 @@ interface DesignSystem {
 
 export interface CanonicalizeResult {
   canonical: string[];
-  /** The stylesheet and every file Tailwind read while loading it. */
+  /** The stylesheet, the Tailwind engine's package.json, and every file Tailwind read while loading the stylesheet. */
   files: string[];
 }
 
@@ -34,7 +40,7 @@ async function loadStylesheet(cssPath: string): Promise<LoadedStylesheet> {
   const dependencies: string[] = [];
   // Only compile() reports the files Tailwind reads; @tailwindcss/node exposes no design system loader that does.
   await compile(css, { base, from: cssPath, onDependency: (file) => dependencies.push(file) });
-  const files = [cssPath, ...new Set(dependencies)];
+  const files = [cssPath, enginePackageJson, ...new Set(dependencies)];
   return {
     files,
     stamp: statStamp(files),
