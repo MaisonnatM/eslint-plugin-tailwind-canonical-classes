@@ -1,8 +1,6 @@
 import type { Rule } from 'eslint';
-import {
-  collectClassExpressionSources,
-  isClassCall,
-} from './class-sources/class-expression.js';
+import type * as ESTree from 'estree';
+import { collectClassExpressionSources } from './class-sources/class-expression.js';
 import { getSourceCode, setupRuleContext } from './class-sources/context.js';
 import { collectJsxClassNameSources } from './class-sources/jsx.js';
 import { createClassSourceReporter } from './class-sources/pipeline.js';
@@ -94,17 +92,17 @@ const rule: Rule.RuleModule = {
       },
     };
 
-    const scriptVisitor: Rule.RuleListener = {
-      CallExpression(node) {
-        if (
-          ctx.walkedClassCalls.has(node) ||
-          !isClassCall(node, ctx.calleeFunctions)
-        ) {
-          return;
-        }
-
+    const reportClassFunction = (
+      node: ESTree.CallExpression | ESTree.TaggedTemplateExpression,
+    ) => {
+      if (!ctx.walkedClassCalls.has(node)) {
         reportClassSources(collectClassExpressionSources(node, ctx));
-      },
+      }
+    };
+
+    const scriptVisitor: Rule.RuleListener = {
+      CallExpression: reportClassFunction,
+      TaggedTemplateExpression: reportClassFunction,
     };
 
     return wireRuleVisitors(

@@ -29,7 +29,7 @@
 - 🔧 **Auto-fix Support**: Automatically fixes non-canonical classes using ESLint's auto-fix feature
 - 🎯 **Tailwind CSS v4 Integration**: Uses Tailwind CSS v4's official `canonicalizeCandidates` API
 - 📝 **Multiple Format Support**: Works with string literals, template literals, ternaries, `&&`/`||`, arrays, and object keys
-- 🛠️ **Utility Function Support**: Detects and fixes classes in utility functions like `cn()`, `clsx()`, `classNames()`, `twMerge()`, and `cva()`
+- 🛠️ **Utility Function Support**: Detects and fixes classes in utility functions like `cn()`, `clsx()`, `classNames()`, `twMerge()`, `cva()`, and `tv()`, and in `` tw`…` `` tagged templates
 - ⚡ **Zero Config**: Minimal configuration required to get started
 
 ## ⚖️ Comparison
@@ -44,7 +44,7 @@ Two larger plugins also ship a canonical-classes rule built on the same Tailwind
 | Rule time, 400 JSX files, 12k class strings, first run | 1.2 s | 1.2 s | 9.8 s |
 | Same, next runs (on-disk cache) | 0.1 s | 1.2 s | 9.8 s |
 | Ternaries, template literals with `${}`, `clsx` object keys, Vue `:class` object/array bindings | Checked | Checked | Checked |
-| `cva` variants, `tv()`, `` tw`…` `` tagged templates | Not checked | Checked | Checked |
+| `cva` variants, `tv()`, `` tw`…` `` tagged templates | Checked | Checked | Checked |
 
 Measured on 2026-10-20 with ESLint 9.39, Tailwind CSS 4.3.3, `eslint-plugin-tailwindcss` 4.4.0, and `eslint-plugin-better-tailwindcss` 4.10.0. Rule time is total lint time minus a run with the rule off, median of five runs.
 
@@ -134,7 +134,7 @@ export default [
         {
           cssPath: './app/styles/globals.css', // Required
           rootFontSize: 16, // Optional, default: 16
-          calleeFunctions: ['cn', 'clsx'], // Optional, default: ['cn', 'clsx', 'classNames', 'twMerge', 'cva']
+          calleeFunctions: ['cn', 'clsx'], // Optional, default: ['cn', 'clsx', 'classNames', 'twMerge', 'cva', 'tv', 'tw']
         },
       ],
     },
@@ -272,8 +272,8 @@ rootFontSize: 14  // If your root font size is 14px
 ### `calleeFunctions` (optional)
 
 - **Type**: `string[]`
-- **Default**: `['cn', 'clsx', 'classNames', 'twMerge', 'cva']`
-- **Description**: Array of utility function names to check for Tailwind classes. The plugin will detect and canonicalize classes passed as string arguments to these functions.
+- **Default**: `['cn', 'clsx', 'classNames', 'twMerge', 'cva', 'tv', 'tw']`
+- **Description**: Names of functions whose arguments hold Tailwind classes. A name also matches tagged templates, such as `` tw`…` `` and `` tw.div`…` ``. For `cva` and `tv`, classes are read from the config values (`base`, `slots`, variant options, and `class`/`className` in compound entries); `defaultVariants` is skipped.
 
 **Example**:
 ```javascript
@@ -320,6 +320,9 @@ The plugin supports various class name formats:
    ```tsx
    <div className={cn("p-4px", "m-2rem")}>Content</div>
    <div className={clsx("w-[16px]", condition && "hidden")}>Content</div>
+   const button = cva("w-[16px]", { variants: { size: { sm: "h-[32px]" } } });
+   const card = tv({ base: "p-4px", slots: { title: "m-2rem" } });
+   const Title = tw.h1`text-[16px]`;
    // Variables and other dynamic values are skipped
    ```
 
@@ -397,7 +400,7 @@ Set `TAILWIND_CANONICAL_CLASSES_CACHE_DIR` to store the cache somewhere else, fo
 - **Tailwind CSS v4 required**: Requires Tailwind CSS v4 (not compatible with v3)
 - **CSS file accessibility**: CSS file must be accessible from the ESLint process
 - **Template literals**: A class touching a `${}` expression (for example `bg-${color}`) is skipped
-- **Dynamic values**: Variables, computed object keys, and object values are skipped; `cva` variant objects and `tv()` configs are not checked
+- **Dynamic values**: Variables, computed object keys, and `clsx` object values are skipped
 - **Framework parsers**: `flat/svelte` and `flat/vue` require `svelte-eslint-parser` and `vue-eslint-parser` respectively
 
 ## 🐛 Troubleshooting

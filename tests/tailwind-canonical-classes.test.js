@@ -98,9 +98,63 @@ describe('tailwind-canonical-classes', () => {
         code: '<div className={`w-[16px]-${size} ${a}w-[16px]`}>Content</div>',
         options: [{ cssPath }],
       },
+      {
+        code: 'const a = css`w-[16px]`; const b = styled.div`h-[32px]`;',
+        options: [{ cssPath }],
+      },
     ],
 
     invalid: [
+      {
+        code: `const button = cva("w-[16px]", {
+  variants: { size: { sm: "h-[32px]", lg: ["p-[4px]"] } },
+  compoundVariants: [{ size: "m-[8px]", class: "bg-[#fff]" }],
+  defaultVariants: { size: "w-[20px]" },
+});`,
+        output: `const button = cva("w-4", {
+  variants: { size: { sm: "h-8", lg: ["p-1"] } },
+  compoundVariants: [{ size: "m-[8px]", class: "bg-white" }],
+  defaultVariants: { size: "w-[20px]" },
+});`,
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+          { messageId: 'nonCanonical', data: { original: 'h-[32px]', canonical: 'h-8' } },
+          { messageId: 'nonCanonical', data: { original: 'p-[4px]', canonical: 'p-1' } },
+          { messageId: 'nonCanonical', data: { original: 'bg-[#fff]', canonical: 'bg-white' } },
+        ],
+      },
+      {
+        code: `const card = tv({
+  base: "w-[16px]",
+  slots: { title: "h-[32px]" },
+  variants: { tone: { dark: { title: "bg-[#000]" } } },
+  compoundSlots: [{ slots: ["title"], tone: "m-[8px]", className: "p-[4px]" }],
+}, { twMergeConfig: { classGroups: { x: ["w-[20px]"] } } });`,
+        output: `const card = tv({
+  base: "w-4",
+  slots: { title: "h-8" },
+  variants: { tone: { dark: { title: "bg-black" } } },
+  compoundSlots: [{ slots: ["title"], tone: "m-[8px]", className: "p-1" }],
+}, { twMergeConfig: { classGroups: { x: ["w-[20px]"] } } });`,
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+          { messageId: 'nonCanonical', data: { original: 'h-[32px]', canonical: 'h-8' } },
+          { messageId: 'nonCanonical', data: { original: 'bg-[#000]', canonical: 'bg-black' } },
+          { messageId: 'nonCanonical', data: { original: 'p-[4px]', canonical: 'p-1' } },
+        ],
+      },
+      {
+        code: 'const a = tw`w-[16px] ${x}`; const B = tw.div`h-[32px]`; const c = <div className={tw`p-[4px]`} />;',
+        output: 'const a = tw`w-4 ${x}`; const B = tw.div`h-8`; const c = <div className={tw`p-1`} />;',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+          { messageId: 'nonCanonical', data: { original: 'h-[32px]', canonical: 'h-8' } },
+          { messageId: 'nonCanonical', data: { original: 'p-[4px]', canonical: 'p-1' } },
+        ],
+      },
       {
         code: '<div className={active ? "w-[16px]" : "h-8"}>Content</div>',
         output: '<div className={active ? "w-4" : "h-8"}>Content</div>',
