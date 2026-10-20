@@ -15,4 +15,7 @@ yarn-error.log*
 lib/
 
 # Manual testing environment
-test-env/bench/.out/
+test-env/
+
+# Benchmark output
+bench/.out/

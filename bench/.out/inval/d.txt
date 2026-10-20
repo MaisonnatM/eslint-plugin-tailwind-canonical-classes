@@ -1,1 +1,0 @@
-1	Class 'w-[16px]' should be 'w-2'
