@@ -25,7 +25,14 @@
     "tailwindcss",
     "canonical",
     "lint",
-    "css"
+    "css",
+    "tailwindcss-v4",
+    "canonical-classes",
+    "eslint-rule",
+    "autofix",
+    "react",
+    "vue",
+    "svelte"
   ],
   "author": "Maisonnat Maxence <maisonnatmax@gmail.com>",
   "license": "MIT",
