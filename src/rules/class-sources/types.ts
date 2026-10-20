@@ -20,6 +20,6 @@ export interface CanonicalizationContext {
   calleeFunctions: string[];
   canonicalizeClasses: (candidates: string[]) => string[];
   sourceText: string;
-  /** Class calls already collected while walking an enclosing class expression. */
-  walkedClassCalls: WeakSet<ESTree.CallExpression>;
+  /** Class calls and tagged templates already collected while walking an enclosing class expression. */
+  walkedClassCalls: WeakSet<ESTree.CallExpression | ESTree.TaggedTemplateExpression>;
 }

@@ -97,6 +97,8 @@ export function setupRuleContext(
     'classNames',
     'twMerge',
     'cva',
+    'tv',
+    'tw',
   ];
 
   return {

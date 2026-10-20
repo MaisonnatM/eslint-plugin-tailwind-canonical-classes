@@ -3,21 +3,36 @@ import type * as ESTree from 'estree';
 import { getQuoteChar, joinClasses, splitClasses } from './estree.js';
 import type { CanonicalizationContext, ClassSource } from './types.js';
 
-export function isClassCall(
+/**
+ * Returns the name an identifier or member expression ends with: `cn` for
+ * both `cn` and `utils.cn`. Used for callees and for object property keys.
+ */
+function getNameOf(node: ESTree.Node): string | null {
+  if (node.type === 'Identifier') {
+    return node.name;
+  }
+  return node.type === 'MemberExpression' && node.property.type === 'Identifier'
+    ? node.property.name
+    : null;
+}
+
+/**
+ * Returns the function name when `node` calls a configured class function,
+ * either as `cn(...)` or as a tagged template such as `` tw`...` `` or `` tw.div`...` ``.
+ */
+export function getClassFunctionName(
   node: ESTree.Node,
   calleeFunctions: string[],
-): node is ESTree.CallExpression {
-  if (node.type !== 'CallExpression') {
-    return false;
+): string | null {
+  let name: string | null = null;
+  if (node.type === 'CallExpression') {
+    name = getNameOf(node.callee);
+  } else if (node.type === 'TaggedTemplateExpression') {
+    // Only `tw` and `tw.<tag>`: in `theme.tw` or `tw.colors.div`, `tw` is not the tag function.
+    const target = node.tag.type === 'MemberExpression' ? node.tag.object : node.tag;
+    name = target.type === 'Identifier' ? target.name : null;
   }
-  const { callee } = node;
-  const name =
-    callee.type === 'Identifier'
-      ? callee.name
-      : callee.type === 'MemberExpression' && callee.property.type === 'Identifier'
-        ? callee.property.name
-        : null;
-  return name !== null && calleeFunctions.includes(name);
+  return name !== null && calleeFunctions.includes(name) ? name : null;
 }
 
 /**
@@ -106,16 +121,105 @@ function walk(
       }
       return;
     case 'CallExpression':
-      if (isClassCall(node, ctx.calleeFunctions)) {
-        // The CallExpression visitor skips calls collected here, so each is reported once.
-        ctx.walkedClassCalls.add(node);
-        for (const arg of node.arguments) {
-          walk(arg, ctx, sources);
-        }
+    case 'TaggedTemplateExpression': {
+      const name = getClassFunctionName(node, ctx.calleeFunctions);
+      if (name === null) {
+        return;
+      }
+      // The script visitor skips class calls collected here, so each is reported once.
+      ctx.walkedClassCalls.add(node);
+      if (node.type === 'TaggedTemplateExpression') {
+        walk(node.quasi, ctx, sources);
+      } else {
+        walkClassFunctionArguments(node, name, ctx, sources);
       }
       return;
+    }
     default:
       return;
+  }
+}
+
+function walkClassFunctionArguments(
+  node: ESTree.CallExpression,
+  name: string,
+  ctx: CanonicalizationContext,
+  sources: ClassSource[],
+): void {
+  if (name === 'cva') {
+    // cva('base', { variants }) and cva({ base, variants })
+    node.arguments.forEach((arg) => walkVariantConfig(arg, ctx, sources));
+  } else if (name === 'tv') {
+    // The second tv() argument configures tailwind-merge, not classes.
+    walkVariantConfig(node.arguments[0], ctx, sources);
+  } else {
+    node.arguments.forEach((arg) => walk(arg, ctx, sources));
+  }
+}
+
+function getKeyName(property: ESTree.Property): string | null {
+  if (property.computed) {
+    return null;
+  }
+  return property.key.type === 'Literal' ? String(property.key.value) : getNameOf(property.key);
+}
+
+/**
+ * Walks a cva() or tv() config, where classes sit in property values:
+ * `base`, `slots`, and every variant option. `defaultVariants` holds variant
+ * names, and compound entries hold their classes only in `class` or `className`.
+ */
+function walkVariantConfig(
+  node: ESTree.Node | null | undefined,
+  ctx: CanonicalizationContext,
+  sources: ClassSource[],
+): void {
+  if (node?.type === 'ArrayExpression') {
+    node.elements.forEach((element) => walkVariantConfig(element, ctx, sources));
+    return;
+  }
+  if (node?.type !== 'ObjectExpression') {
+    walk(node, ctx, sources);
+    return;
+  }
+  for (const property of node.properties) {
+    if (property.type !== 'Property') {
+      continue;
+    }
+    const key = getKeyName(property);
+    if (key === null || key === 'defaultVariants') {
+      continue;
+    }
+    if (key === 'compoundVariants' || key === 'compoundSlots') {
+      walkCompoundEntries(property.value, ctx, sources);
+    } else {
+      walkVariantConfig(property.value, ctx, sources);
+    }
+  }
+}
+
+/** Walks `compoundVariants` or `compoundSlots`, whose entries mix conditions with `class`/`className`. */
+function walkCompoundEntries(
+  node: ESTree.Node,
+  ctx: CanonicalizationContext,
+  sources: ClassSource[],
+): void {
+  if (node.type !== 'ArrayExpression') {
+    return;
+  }
+  for (const entry of node.elements) {
+    if (entry?.type !== 'ObjectExpression') {
+      continue;
+    }
+    for (const field of entry.properties) {
+      if (field.type !== 'Property') {
+        continue;
+      }
+      const key = getKeyName(field);
+      if (key === 'class' || key === 'className') {
+        walkVariantConfig(field.value, ctx, sources);
+      }
+    }
   }
 }
 
