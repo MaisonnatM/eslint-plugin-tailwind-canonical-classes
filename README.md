@@ -41,9 +41,9 @@ Two larger plugins also ship a canonical-classes rule built on the same Tailwind
 | Scope | Canonical classes only | Full Tailwind rule set | Full Tailwind rule set |
 | `px` → spacing scale (`p-[16px]` → `p-4`) | On by default | No | With `rootFontSize` |
 | Two classes with the same canonical form (`p-[1rem] p-4`) | Fixes only `p-[1rem]` | Rewrites the wrong classes | Not reported |
-| Rule time, 400 TSX files, 12k class strings, first run | 1.2 s | 1.2 s | 9.8 s |
+| Rule time, 400 JSX files, 12k class strings, first run | 1.2 s | 1.2 s | 9.8 s |
 | Same, next runs (on-disk cache) | 0.1 s | 1.2 s | 9.8 s |
-| Ternaries, template literals with `${}`, `clsx` object keys, `cva` variants, `tv()`, Vue `:class` expressions | Not checked | Checked | Checked |
+| Ternaries, template literals with `${}`, `clsx` object keys, `cva` variants, `tv()`, Vue `:class` object/array bindings | Not checked | Checked | Checked |
 
 Measured on 2026-10-20 with ESLint 9.39, Tailwind CSS 4.3.3, `eslint-plugin-tailwindcss` 4.4.0, and `eslint-plugin-better-tailwindcss` 4.10.0. Rule time is total lint time minus a run with the rule off, median of five runs.
 
