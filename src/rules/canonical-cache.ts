@@ -104,7 +104,41 @@ function dependencyManifestPath(cacheDir: string, cssPath: string): string {
 }
 
 function tablePath(cacheDir: string, key: string, rem: number): string {
-  return path.join(cacheDir, `${key}-${rem}.json`);
+  return path.join(cacheDir, `${key}-${rem}.jsonl`);
+}
+
+/** Reads `[class, canonical]` lines; a torn line from a crashed writer is skipped. */
+function readTable(file: string): Map<string, string> {
+  const table = new Map<string, string>();
+  let text: string;
+  try {
+    text = fs.readFileSync(file, 'utf-8');
+  } catch {
+    return table;
+  }
+  for (const line of text.split('\n')) {
+    try {
+      const [candidate, canonical] = JSON.parse(line) as [string, string];
+      table.set(candidate, canonical);
+    } catch {
+      continue;
+    }
+  }
+  return table;
+}
+
+/** Appends only new answers, so each miss costs its own size and concurrent linters never overwrite each other. */
+function appendTable(file: string, entries: Iterable<[string, string]>): void {
+  let text = '';
+  for (const entry of entries) {
+    text += `${JSON.stringify(entry)}\n`;
+  }
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.appendFileSync(file, text);
+  } catch {
+    // An unwritable cache only costs later runs their warm start.
+  }
 }
 
 function getStylesheet(cacheDir: string, cssPath: string): StylesheetCache {
@@ -129,9 +163,7 @@ export function createClassCanonicalizer(
   let stylesheet = getStylesheet(cacheDir, cssPath);
   let canonicalByClass = stylesheet.canonicalByRem.get(rem);
   if (!canonicalByClass) {
-    canonicalByClass = new Map(
-      Object.entries(readJson<Record<string, string>>(tablePath(cacheDir, stylesheet.key, rem)) ?? {}),
-    );
+    canonicalByClass = readTable(tablePath(cacheDir, stylesheet.key, rem));
     stylesheet.canonicalByRem.set(rem, canonicalByClass);
   }
   const table = canonicalByClass;
@@ -144,14 +176,16 @@ export function createClassCanonicalizer(
       missing.forEach((candidate, index) => table.set(candidate, canonical[index]));
 
       if (files.join('\0') !== stylesheet.files.join('\0')) {
+        // The key changed with the dependency list: the new table file starts with every answer so far.
         stylesheet = loadStylesheet(cacheDir, cssPath, files);
         stylesheet.canonicalByRem.set(rem, table);
+        appendTable(tablePath(cacheDir, stylesheet.key, rem), table);
+      } else {
+        appendTable(
+          tablePath(cacheDir, stylesheet.key, rem),
+          missing.map((candidate, index): [string, string] => [candidate, canonical[index]]),
+        );
       }
-      const file = tablePath(cacheDir, stylesheet.key, rem);
-      writeJson(file, {
-        ...readJson<Record<string, string>>(file),
-        ...Object.fromEntries(table),
-      });
     }
     return candidates.map((candidate) => table.get(candidate)!);
   };
