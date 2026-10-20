@@ -10,6 +10,7 @@
 ## 📋 Table of Contents
 
 - [Features](#-features)
+- [Comparison](#-comparison)
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
 - [Configuration](#-configuration)
@@ -30,6 +31,21 @@
 - 📝 **Multiple Format Support**: Works with string literals, template literals, and JSX expressions
 - 🛠️ **Utility Function Support**: Detects and fixes classes in utility functions like `cn()`, `clsx()`, `classNames()`, `twMerge()`, and `cva()`
 - ⚡ **Zero Config**: Minimal configuration required to get started
+
+## ⚖️ Comparison
+
+Two larger plugins also ship a canonical-classes rule built on the same Tailwind API: [`eslint-plugin-tailwindcss`](https://github.com/francoismassart/eslint-plugin-tailwindcss) (`enforces-canonical-classname`) and [`eslint-plugin-better-tailwindcss`](https://github.com/schoero/eslint-plugin-better-tailwindcss) (`enforce-canonical-classes`). Choose this plugin when you want only canonical class names, with no other Tailwind rules to configure.
+
+| | This plugin | `eslint-plugin-tailwindcss` | `eslint-plugin-better-tailwindcss` |
+|---|---|---|---|
+| Scope | Canonical classes only | Full Tailwind rule set | Full Tailwind rule set |
+| `px` → spacing scale (`p-[16px]` → `p-4`) | On by default | No | With `rootFontSize` |
+| Two classes with the same canonical form (`p-[1rem] p-4`) | Fixes only `p-[1rem]` | Rewrites the wrong classes | Not reported |
+| Rule time, 400 TSX files, 12k class strings, first run | 1.2 s | 1.2 s | 9.8 s |
+| Same, next runs (on-disk cache) | 0.1 s | 1.2 s | 9.8 s |
+| Ternaries, template literals with `${}`, `clsx` object keys, `cva` variants, `tv()`, Vue `:class` expressions | Not checked | Checked | Checked |
+
+Measured on 2026-10-20 with ESLint 9.39, Tailwind CSS 4.3.3, `eslint-plugin-tailwindcss` 4.4.0, and `eslint-plugin-better-tailwindcss` 4.10.0. Rule time is total lint time minus a run with the rule off, median of five runs.
 
 ## 📦 Installation
 
@@ -287,10 +303,10 @@ The plugin supports various class name formats:
    <div className="p-4 m-2">Content</div>
    ```
 
-2. **Template literals** (static parts only):
+2. **Template literals** without `${}` expressions:
    ```tsx
-   <div className={`p-4 ${someVar}`}>Content</div>
-   // Only "p-4" will be checked, dynamic parts are skipped
+   <div className={`p-4 m-2`}>Content</div>
+   // A template literal that contains ${} is skipped entirely
    ```
 
 3. **JSX expression containers**:
@@ -378,7 +394,7 @@ Set `TAILWIND_CANONICAL_CLASSES_CACHE_DIR` to store the cache somewhere else, fo
 - **Static classes only**: Only works with static class names (no dynamic expressions)
 - **Tailwind CSS v4 required**: Requires Tailwind CSS v4 (not compatible with v3)
 - **CSS file accessibility**: CSS file must be accessible from the ESLint process
-- **Template literals**: Template literals with expressions are partially supported (only static parts are checked)
+- **Template literals**: Template literals that contain `${}` expressions are skipped
 - **Utility functions**: Only string literal arguments are checked; dynamic expressions, variables, and conditional logic within utility functions are skipped
 - **Framework parsers**: `flat/svelte` and `flat/vue` require `svelte-eslint-parser` and `vue-eslint-parser` respectively
 - **Vue `:class` object/array forms**: Object and array `:class` bindings (for example `{ 'w-4': true }` or `['w-4', dynamic]`) are skipped
