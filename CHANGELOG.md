@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.4.1...v1.4.2) (2026-10-20)
+
+
+### Performance Improvements
+
+* cache canonical classes and fix misaligned canonicalization ([a6ec391](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/a6ec3916b4dc6f00582f354ecf116e027cac5b21))
+
 ## [1.4.1](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.4.0...v1.4.1) (2026-07-15)
 
 
