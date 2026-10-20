@@ -45,6 +45,7 @@
     "build:watch": "tsc --watch",
     "test": "npm run build && vitest",
     "test:run": "npm run build && vitest run",
+    "bench": "npm run build && node bench/generate.mjs bench/.out/project 400 40 && node bench/lint.mjs . bench/.out/project",
     "prepublishOnly": "npm run build",
     "release": "semantic-release"
   },

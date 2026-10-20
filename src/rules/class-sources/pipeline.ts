@@ -18,7 +18,7 @@ export function reportClassSources(
 
       source.classes.forEach((className, index) => {
         const canonical = canonicalized[index];
-        if (canonical && canonical !== className) {
+        if (canonical !== className) {
           errors.push({ original: className, canonical, index });
         }
       });

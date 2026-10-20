@@ -10,15 +10,17 @@ function canonicalizeCandidates(candidates) {
   });
 }
 
-export const mockCanonicalizeSync = vi.fn((cssPath, cssContent, basePath, candidates) =>
-  canonicalizeCandidates(candidates),
-);
+export const mockCanonicalizeSync = vi.fn((cssPath, candidates) => ({
+  canonical: canonicalizeCandidates(candidates),
+  files: [cssPath],
+}));
 
 export function resetCanonicalizeMock() {
   mockCanonicalizeSync.mockClear();
-  mockCanonicalizeSync.mockImplementation((cssPath, cssContent, basePath, candidates) =>
-    canonicalizeCandidates(candidates),
-  );
+  mockCanonicalizeSync.mockImplementation((cssPath, candidates) => ({
+    canonical: canonicalizeCandidates(candidates),
+    files: [cssPath],
+  }));
 }
 
 vi.mock('synckit', () => ({

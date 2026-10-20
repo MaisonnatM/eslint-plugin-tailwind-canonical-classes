@@ -367,9 +367,9 @@ function Button({ variant, className }) {
 
 ### Cache
 
-Tailwind needs about a second to build its canonicalization index the first time it sees an arbitrary value such as `w-[16px]`. To skip that on later runs, the plugin stores every class it has canonicalized in `node_modules/.cache/eslint-plugin-tailwind-canonical-classes/`. A run that finds all of its classes there never starts Tailwind.
+Tailwind needs about a second to build its canonicalization index the first time it sees a class. To skip that on later runs, the plugin stores every class it has canonicalized in `node_modules/.cache/eslint-plugin-tailwind-canonical-classes/` under the ESLint working directory, or in the system temp directory when there is no `node_modules`. A run that finds all of its classes there never starts Tailwind.
 
-The cache key covers the Tailwind version, `rootFontSize`, your CSS file, and every local file it pulls in through `@import`, `@plugin`, `@config`, or `@reference`. Changes to any of these start a fresh cache. Changes inside npm packages that your CSS imports, other than Tailwind itself, do not. Delete the directory after upgrading such a package.
+The cache is tied to the plugin version, `rootFontSize`, and every file Tailwind read to load your CSS: the stylesheet, its local imports, and imported package files such as `tailwindcss/index.css`. Editing or upgrading any of them starts a fresh cache, including inside a running editor or `eslint_d`.
 
 Set `TAILWIND_CANONICAL_CLASSES_CACHE_DIR` to store the cache somewhere else, for example a directory your CI caches between runs.
 
