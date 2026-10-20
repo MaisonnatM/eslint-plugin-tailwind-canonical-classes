@@ -1,3 +1,10 @@
+## [1.4.3](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.4.2...v1.4.3) (2026-10-20)
+
+
+### Bug Fixes
+
+* report Tailwind failures instead of swallowing them ([5a338ee](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/5a338eee06ce363a243a9e44276302f217e97830))
+
 ## [1.4.2](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.4.1...v1.4.2) (2026-10-20)
 
 
