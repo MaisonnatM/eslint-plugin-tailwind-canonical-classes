@@ -1,7 +1,7 @@
 import type { Rule } from 'eslint';
 import { getSourceCode, setupRuleContext } from './class-sources/context.js';
 import { collectJsxClassNameSources } from './class-sources/jsx.js';
-import { reportClassSources } from './class-sources/pipeline.js';
+import { createClassSourceReporter } from './class-sources/pipeline.js';
 import {
   collectScriptCallExpressionSources,
   isInsideFrameworkClassAttribute,
@@ -24,6 +24,8 @@ const rule: Rule.RuleModule = {
     messages: {
       nonCanonical: "Class '{{original}}' should be '{{canonical}}'",
       cssNotFound: 'Could not load Tailwind CSS file: {{path}}',
+      canonicalizeFailed:
+        'Tailwind could not canonicalize classes with {{path}}: {{error}}',
     },
     schema: [
       {
@@ -66,6 +68,7 @@ const rule: Rule.RuleModule = {
     }
 
     const ctx = setup.context;
+    const reportClassSources = createClassSourceReporter(context, ctx);
 
     const templateBodyVisitor: Rule.RuleListener = {
       JSXAttribute(node: unknown) {
@@ -79,23 +82,15 @@ const rule: Rule.RuleModule = {
           return;
         }
 
-        reportClassSources(context, collectJsxClassNameSources(node, ctx), ctx);
+        reportClassSources(collectJsxClassNameSources(node, ctx));
       },
 
       SvelteAttribute(node: unknown) {
-        reportClassSources(
-          context,
-          collectSvelteClassAttributeSources(node, ctx),
-          ctx,
-        );
+        reportClassSources(collectSvelteClassAttributeSources(node, ctx));
       },
 
       VAttribute(node: unknown) {
-        reportClassSources(
-          context,
-          collectVueClassAttributeSources(node, ctx),
-          ctx,
-        );
+        reportClassSources(collectVueClassAttributeSources(node, ctx));
       },
     };
 
@@ -109,7 +104,7 @@ const rule: Rule.RuleModule = {
           return;
         }
 
-        reportClassSources(context, sources, ctx);
+        reportClassSources(sources);
       },
     };
 
