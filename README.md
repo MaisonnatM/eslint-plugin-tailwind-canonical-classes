@@ -365,6 +365,14 @@ function Button({ variant, className }) {
 3. **Canonicalize**: For each class, it uses Tailwind's `canonicalizeCandidates` to find the canonical form
 4. **Report & Fix**: If a non-canonical class is found, it reports an error/warning and can auto-fix it
 
+### Cache
+
+Tailwind needs about a second to build its canonicalization index the first time it sees an arbitrary value such as `w-[16px]`. To skip that on later runs, the plugin stores every class it has canonicalized in `node_modules/.cache/eslint-plugin-tailwind-canonical-classes/`. A run that finds all of its classes there never starts Tailwind.
+
+The cache key covers the Tailwind version, `rootFontSize`, your CSS file, and every local file it pulls in through `@import`, `@plugin`, `@config`, or `@reference`. Changes to any of these start a fresh cache. Changes inside npm packages that your CSS imports, other than Tailwind itself, do not. Delete the directory after upgrading such a package.
+
+Set `TAILWIND_CANONICAL_CLASSES_CACHE_DIR` to store the cache somewhere else, for example a directory your CI caches between runs.
+
 ## ⚠️ Limitations
 
 - **Static classes only**: Only works with static class names (no dynamic expressions)

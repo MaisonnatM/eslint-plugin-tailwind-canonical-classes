@@ -31,6 +31,16 @@ describe('tailwind-canonical-classes (Integration)', () => {
           },
         ],
       },
+      {
+        code: '<div className="gap-[8px] gap-2 p-2">Content</div>',
+        output: '<div className="gap-2 gap-2 p-2">Content</div>',
+        options: [{ cssPath }],
+        errors: [
+          {
+            message: "Class 'gap-[8px]' should be 'gap-2'",
+          },
+        ],
+      },
     ],
   });
 }, 30000);

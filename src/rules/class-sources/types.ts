@@ -11,14 +11,12 @@ export interface ClassSource {
   classes: string[];
   fixRange: [number, number];
   buildFix: (fixedClasses: string[]) => string;
-  /** Node to attach cssNotFound when canonicalization cannot load CSS */
-  cssNotFoundNode?: Rule.Node;
 }
 
 export interface CanonicalizationContext {
   cssPath: string;
   rootFontSize: number;
   calleeFunctions: string[];
-  canonicalizeClasses: (candidates: string[]) => string[] | null;
+  canonicalizeClasses: (candidates: string[]) => string[];
   sourceText: string;
 }

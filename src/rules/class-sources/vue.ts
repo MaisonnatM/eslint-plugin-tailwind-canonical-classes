@@ -92,11 +92,7 @@ export function collectVueClassAttributeSources(
   }
 
   if (attr.directive && attr.value?.type === 'VExpressionContainer') {
-    return buildClassSourcesFromCallExpression(
-      attr.value.expression,
-      ctx,
-      { cssNotFoundNode: node as Rule.Node },
-    );
+    return buildClassSourcesFromCallExpression(attr.value.expression, ctx);
   }
 
   return [];

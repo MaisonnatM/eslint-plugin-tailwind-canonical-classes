@@ -46,9 +46,7 @@ export function collectSvelteClassAttributeSources(
 
     if (part.type === 'SvelteMustacheTag') {
       sources.push(
-        ...buildClassSourcesFromCallExpression(part.expression, ctx, {
-          cssNotFoundNode: node as Rule.Node,
-        }),
+        ...buildClassSourcesFromCallExpression(part.expression, ctx),
       );
     }
   }

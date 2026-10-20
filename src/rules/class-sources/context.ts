@@ -1,4 +1,6 @@
+import { createHash, type Hash } from 'node:crypto';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSyncFn } from 'synckit';
@@ -9,26 +11,127 @@ const workerPath = fileURLToPath(
   new URL('../tailwind-worker.js', import.meta.url),
 );
 
-const canonicalizeSync = createSyncFn(workerPath) as (
+type CanonicalizeSync = (
+  cssPath: string,
   cssContent: string,
   basePath: string,
   candidates: string[],
   options: { rem?: number },
 ) => string[];
 
-function canonicalizeClassesFromFile(
+// Spawned on the first cache miss so fully cached runs never start Tailwind.
+let canonicalizeSync: CanonicalizeSync | undefined;
+
+interface CanonicalTable {
+  diskFile: string;
+  canonicalByClass: Map<string, string>;
+}
+
+interface CssCache {
+  mtimeMs: number;
+  size: number;
+  tableByRem: Map<number, CanonicalTable>;
+}
+
+const cssCaches = new Map<string, CssCache>();
+
+const require = createRequire(import.meta.url);
+const tailwindPackageJson = fs.readFileSync(
+  path.join(path.dirname(require.resolve('@tailwindcss/node')), '..', 'package.json'),
+  'utf-8',
+);
+const diskCacheDir =
+  process.env.TAILWIND_CANONICAL_CLASSES_CACHE_DIR ??
+  path.join(process.cwd(), 'node_modules', '.cache', 'eslint-plugin-tailwind-canonical-classes');
+const dirtyDiskCaches = new Map<string, Map<string, string>>();
+
+const LOCAL_DEPENDENCY = /@(?:import|plugin|config|reference)\s+(?:url\()?["']([./][^"']*)["']/g;
+
+// Hashes the CSS file plus every local file it pulls in, so editing an imported theme invalidates the cache.
+function hashCssGraph(file: string, hash: Hash, seen: Set<string>): void {
+  if (seen.has(file)) return;
+  seen.add(file);
+  let content: string;
+  try {
+    content = fs.readFileSync(file, 'utf-8');
+  } catch {
+    hash.update(`\0missing:${file}`);
+    return;
+  }
+  hash.update(`\0${file}\0${content}`);
+  if (!file.endsWith('.css')) return;
+  for (const [, specifier] of content.matchAll(LOCAL_DEPENDENCY)) {
+    hashCssGraph(path.resolve(path.dirname(file), specifier), hash, seen);
+  }
+}
+
+function diskCachePath(cssPath: string, rem: number): string {
+  const hash = createHash('sha256').update(`${tailwindPackageJson}\0${rem}`);
+  hashCssGraph(cssPath, hash, new Set());
+  return path.join(diskCacheDir, `${hash.digest('hex')}.json`);
+}
+
+function readDiskCache(file: string): Map<string, string> {
+  try {
+    return new Map(Object.entries(JSON.parse(fs.readFileSync(file, 'utf-8'))));
+  } catch {
+    return new Map();
+  }
+}
+
+function flushDiskCaches(): void {
+  for (const [file, canonicalByClass] of dirtyDiskCaches) {
+    try {
+      fs.mkdirSync(diskCacheDir, { recursive: true });
+      const tmp = `${file}.${process.pid}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(Object.fromEntries(canonicalByClass)));
+      fs.renameSync(tmp, file);
+    } catch {
+      // A cache that cannot be written only costs the next run its warm start.
+    }
+  }
+  dirtyDiskCaches.clear();
+}
+
+process.once('exit', flushDiskCaches);
+
+function createClassCanonicalizer(
   cssPath: string,
-  candidates: string[],
+  cssStat: fs.Stats,
   rootFontSize: number,
-): string[] | null {
-  if (!fs.existsSync(cssPath)) {
-    return null;
+): (candidates: string[]) => string[] {
+  let cache = cssCaches.get(cssPath);
+  if (!cache || cache.mtimeMs !== cssStat.mtimeMs || cache.size !== cssStat.size) {
+    cache = { mtimeMs: cssStat.mtimeMs, size: cssStat.size, tableByRem: new Map() };
+    cssCaches.set(cssPath, cache);
   }
 
-  const cssContent = fs.readFileSync(cssPath, 'utf-8');
-  const basePath = path.dirname(cssPath);
+  let table = cache.tableByRem.get(rootFontSize);
+  if (!table) {
+    const diskFile = diskCachePath(cssPath, rootFontSize);
+    table = { diskFile, canonicalByClass: readDiskCache(diskFile) };
+    cache.tableByRem.set(rootFontSize, table);
+  }
+  const { diskFile, canonicalByClass } = table;
 
-  return canonicalizeSync(cssContent, basePath, candidates, { rem: rootFontSize });
+  return (candidates) => {
+    if (candidates.some((candidate) => !canonicalByClass.has(candidate))) {
+      const missing = [
+        ...new Set(candidates.filter((candidate) => !canonicalByClass.has(candidate))),
+      ];
+      canonicalizeSync ??= createSyncFn(workerPath) as CanonicalizeSync;
+      const results = canonicalizeSync(
+        cssPath,
+        fs.readFileSync(cssPath, 'utf-8'),
+        path.dirname(cssPath),
+        missing,
+        { rem: rootFontSize },
+      );
+      missing.forEach((candidate, index) => canonicalByClass.set(candidate, results[index]));
+      dirtyDiskCaches.set(diskFile, canonicalByClass);
+    }
+    return candidates.map((candidate) => canonicalByClass.get(candidate)!);
+  };
 }
 
 export interface ResolvedCssPath {
@@ -107,7 +210,8 @@ export function setupRuleContext(
     legacyContext.filename ?? legacyContext.getFilename?.();
   const { cssPath, resolvedViaWalkUp } = resolveCssPath(options, cwd, filename);
 
-  if (!fs.existsSync(cssPath)) {
+  const cssStat = fs.statSync(cssPath, { throwIfNoEntry: false });
+  if (!cssStat) {
     if (resolvedViaWalkUp) {
       return { disabled: true };
     }
@@ -133,8 +237,7 @@ export function setupRuleContext(
       rootFontSize,
       calleeFunctions,
       sourceText: sourceCode.getText(),
-      canonicalizeClasses: (candidates) =>
-        canonicalizeClassesFromFile(cssPath, candidates, rootFontSize),
+      canonicalizeClasses: createClassCanonicalizer(cssPath, cssStat, rootFontSize),
     },
   };
 }

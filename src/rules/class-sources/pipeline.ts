@@ -10,15 +10,6 @@ export function reportClassSources(
     try {
       const canonicalized = ctx.canonicalizeClasses(source.classes);
 
-      if (canonicalized === null) {
-        context.report({
-          node: source.cssNotFoundNode ?? source.reportNode,
-          messageId: 'cssNotFound',
-          data: { path: ctx.cssPath },
-        });
-        continue;
-      }
-
       const errors: Array<{
         original: string;
         canonical: string;
