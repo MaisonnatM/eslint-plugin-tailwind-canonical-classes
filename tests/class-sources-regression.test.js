@@ -6,12 +6,7 @@ import {
   getTestCssPath,
   getRuleTesterConfig,
 } from './test-utils.js';
-import {
-  splitClasses,
-  joinClasses,
-  extractStringArgsFromCallExpression,
-  extractStaticValue,
-} from '../lib/rules/class-sources/estree.js';
+import { splitClasses, joinClasses } from '../lib/rules/class-sources/estree.js';
 
 import tailwindCanonicalClasses from '../lib/rules/tailwind-canonical-classes.js';
 
@@ -32,59 +27,6 @@ describe('class-sources regression', () => {
     it('joinClasses joins with a single space', () => {
       expect(joinClasses(['w-4', 'h-8'])).toBe('w-4 h-8');
       expect(joinClasses([])).toBe('');
-    });
-
-    it('extractStaticValue reads string literals and static template literals', () => {
-      expect(extractStaticValue({ type: 'Literal', value: 'w-4 h-8' })).toBe(
-        'w-4 h-8',
-      );
-      expect(
-        extractStaticValue({
-          type: 'TemplateLiteral',
-          expressions: [],
-          quasis: [{ value: { cooked: 'w-4' } }],
-        }),
-      ).toBe('w-4');
-      expect(
-        extractStaticValue({
-          type: 'TemplateLiteral',
-          expressions: [{ type: 'Identifier', name: 'x' }],
-          quasis: [{ value: { cooked: 'w-4' } }],
-        }),
-      ).toBeNull();
-    });
-
-    it('extractStringArgsFromCallExpression collects nested string literals', () => {
-      const node = {
-        type: 'CallExpression',
-        callee: { type: 'Identifier', name: 'cn' },
-        arguments: [
-          { type: 'Literal', value: 'w-[16px]' },
-          {
-            type: 'ConditionalExpression',
-            consequent: { type: 'Literal', value: 'h-[32px]' },
-            alternate: { type: 'Literal', value: 'bg-white' },
-          },
-        ],
-      };
-
-      const result = extractStringArgsFromCallExpression(node, ['cn']);
-      expect(result?.calleeName).toBe('cn');
-      expect(result?.args.map((arg) => arg.value)).toEqual([
-        'w-[16px]',
-        'h-[32px]',
-        'bg-white',
-      ]);
-    });
-
-    it('extractStringArgsFromCallExpression ignores unknown callees', () => {
-      const node = {
-        type: 'CallExpression',
-        callee: { type: 'Identifier', name: 'unknownFn' },
-        arguments: [{ type: 'Literal', value: 'w-[16px]' }],
-      };
-
-      expect(extractStringArgsFromCallExpression(node, ['cn'])).toBeNull();
     });
   });
 

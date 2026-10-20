@@ -4,7 +4,7 @@ import { collectJsxClassNameSources } from './class-sources/jsx.js';
 import { createClassSourceReporter } from './class-sources/pipeline.js';
 import {
   collectScriptCallExpressionSources,
-  isInsideFrameworkClassAttribute,
+  isCollectedByAncestor,
 } from './class-sources/script.js';
 import { collectSvelteClassAttributeSources } from './class-sources/svelte.js';
 import {
@@ -95,11 +95,11 @@ const rule: Rule.RuleModule = {
     };
 
     const scriptVisitor: Rule.RuleListener = {
-      CallExpression(node: unknown) {
+      CallExpression(node) {
         const sources = collectScriptCallExpressionSources(node, ctx);
         if (
           sources.length === 0 ||
-          isInsideFrameworkClassAttribute(node, sourceCode)
+          isCollectedByAncestor(node, sourceCode, ctx.calleeFunctions)
         ) {
           return;
         }

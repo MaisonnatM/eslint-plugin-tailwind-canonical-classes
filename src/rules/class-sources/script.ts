@@ -1,4 +1,5 @@
-import { buildClassSourcesFromCallExpression } from './call-expression.js';
+import type * as ESTree from 'estree';
+import { collectClassExpressionSources, isClassCall } from './class-expression.js';
 import type { CanonicalizationContext, ClassSource } from './types.js';
 import { isVueClassAttribute } from './vue.js';
 
@@ -24,20 +25,26 @@ const CLASS_ATTRIBUTE_MATCHERS: AncestorMatcher[] = [
 ];
 
 export function collectScriptCallExpressionSources(
-  node: unknown,
+  node: ESTree.Node,
   ctx: CanonicalizationContext,
 ): ClassSource[] {
-  return buildClassSourcesFromCallExpression(node, ctx);
+  return isClassCall(node, ctx.calleeFunctions)
+    ? collectClassExpressionSources(node, ctx)
+    : [];
 }
 
-export function isInsideFrameworkClassAttribute(
+/**
+ * True when an enclosing class attribute or class utility call already
+ * collects this call, so reporting it again would duplicate warnings.
+ */
+export function isCollectedByAncestor(
   node: unknown,
   sourceCode: { getAncestors(node: unknown): unknown[] },
+  calleeFunctions: string[],
 ): boolean {
-  for (const ancestor of sourceCode.getAncestors(node)) {
-    if (CLASS_ATTRIBUTE_MATCHERS.some((match) => match(ancestor))) {
-      return true;
-    }
-  }
-  return false;
+  return sourceCode.getAncestors(node).some(
+    (ancestor) =>
+      CLASS_ATTRIBUTE_MATCHERS.some((match) => match(ancestor)) ||
+      isClassCall(ancestor as ESTree.Node, calleeFunctions),
+  );
 }

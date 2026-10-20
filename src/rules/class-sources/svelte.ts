@@ -1,4 +1,4 @@
-import { buildClassSourcesFromCallExpression } from './call-expression.js';
+import { collectClassExpressionSources } from './class-expression.js';
 import { joinClasses, splitClasses } from './estree.js';
 import type { CanonicalizationContext, ClassSource } from './types.js';
 import type { Rule } from 'eslint';
@@ -45,9 +45,7 @@ export function collectSvelteClassAttributeSources(
     flushLiteralRun();
 
     if (part.type === 'SvelteMustacheTag') {
-      sources.push(
-        ...buildClassSourcesFromCallExpression(part.expression, ctx),
-      );
+      sources.push(...collectClassExpressionSources(part.expression, ctx));
     }
   }
 

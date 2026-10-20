@@ -1,8 +1,6 @@
 import type { Rule } from 'eslint';
 import { getSourceCode } from './context.js';
-import {
-  buildClassSourcesFromCallExpression,
-} from './call-expression.js';
+import { collectClassExpressionSources } from './class-expression.js';
 import {
   getQuoteChar,
   joinClasses,
@@ -92,7 +90,7 @@ export function collectVueClassAttributeSources(
   }
 
   if (attr.directive && attr.value?.type === 'VExpressionContainer') {
-    return buildClassSourcesFromCallExpression(attr.value.expression, ctx);
+    return collectClassExpressionSources(attr.value.expression, ctx);
   }
 
   return [];
