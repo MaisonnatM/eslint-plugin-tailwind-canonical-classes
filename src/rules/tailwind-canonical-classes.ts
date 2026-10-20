@@ -24,6 +24,7 @@ const rule: Rule.RuleModule = {
     messages: {
       nonCanonical: "Class '{{original}}' should be '{{canonical}}'",
       cssNotFound: 'Could not load Tailwind CSS file: {{path}}',
+      canonicalizeFailed: 'Tailwind could not canonicalize classes with {{path}}: {{error}}',
     },
     schema: [
       {

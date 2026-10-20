@@ -404,6 +404,14 @@ Set `TAILWIND_CANONICAL_CLASSES_CACHE_DIR` to store the cache somewhere else, fo
 - Ensure the path is relative to your ESLint config file location
 - Check file permissions
 
+### "Tailwind could not canonicalize classes"
+
+**Problem**: ESLint reports `Tailwind could not canonicalize classes with <path>: <error>` once per file and checks no classes in it.
+
+**Solutions**:
+- Tailwind failed to load your CSS file. The message ends with Tailwind's own error.
+- Fix the import, plugin, or syntax it names, for example a package that is not installed in this project
+
 ### Auto-fix not working
 
 **Problem**: ESLint reports issues but doesn't auto-fix them.
