@@ -137,6 +137,22 @@ describe('tailwind-canonical-classes', () => {
         ],
       },
       {
+        code: 'const classes = someFn(cn("w-[16px]"));',
+        output: 'const classes = someFn(cn("w-4"));',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+        ],
+      },
+      {
+        code: '<div className={someFn(cn("w-[16px]"))}>Content</div>',
+        output: '<div className={someFn(cn("w-4"))}>Content</div>',
+        options: [{ cssPath }],
+        errors: [
+          { messageId: 'nonCanonical', data: { original: 'w-[16px]', canonical: 'w-4' } },
+        ],
+      },
+      {
         code: '<div className="w-[16px]">Content</div>',
         output: '<div className="w-4">Content</div>',
         options: [{ cssPath }],

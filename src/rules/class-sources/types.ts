@@ -1,3 +1,4 @@
+import type * as ESTree from 'estree';
 import type { Rule } from 'eslint';
 
 export interface RuleOptions {
@@ -19,4 +20,6 @@ export interface CanonicalizationContext {
   calleeFunctions: string[];
   canonicalizeClasses: (candidates: string[]) => string[];
   sourceText: string;
+  /** Class calls already collected while walking an enclosing class expression. */
+  walkedClassCalls: WeakSet<ESTree.CallExpression>;
 }

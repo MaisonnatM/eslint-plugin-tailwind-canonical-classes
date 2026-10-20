@@ -25,13 +25,37 @@ export function isClassCall(
  * such as a `className={...}` expression or a `cn(...)` argument.
  */
 export function collectClassExpressionSources(
-  node: unknown,
+  node: ESTree.Node | null | undefined,
   ctx: CanonicalizationContext,
 ): ClassSource[] {
   const sources: ClassSource[] = [];
-  // JSX, Vue, and Svelte parsers all emit ESTree expressions inside class attributes.
-  walk(node as ESTree.Node | null, ctx, sources);
+  walk(node, ctx, sources);
   return sources;
+}
+
+/**
+ * Builds the source for a quoted string literal whose whole value is a class
+ * list. The fix rewrites the literal and keeps its quote character.
+ */
+export function buildQuotedLiteralSource(
+  reportNode: Rule.Node,
+  value: string,
+  range: [number, number] | undefined,
+  sourceText: string,
+): ClassSource | null {
+  const classes = splitClasses(value);
+  if (classes.length === 0 || !range) {
+    return null;
+  }
+  return {
+    reportNode,
+    classes,
+    fixRange: range,
+    buildFix: (fixedClasses) => {
+      const quoteChar = getQuoteChar(sourceText, range[0], range[1]);
+      return `${quoteChar}${joinClasses(fixedClasses)}${quoteChar}`;
+    },
+  };
 }
 
 function walk(
@@ -40,11 +64,21 @@ function walk(
   sources: ClassSource[],
 ): void {
   switch (node?.type) {
-    case 'Literal':
-      if (typeof node.value === 'string') {
-        pushLiteralSource(node, node.value, ctx, sources);
+    case 'Literal': {
+      if (typeof node.value !== 'string') {
+        return;
+      }
+      const source = buildQuotedLiteralSource(
+        node as Rule.Node,
+        node.value,
+        node.range,
+        ctx.sourceText,
+      );
+      if (source !== null) {
+        sources.push(source);
       }
       return;
+    }
     case 'TemplateLiteral':
       node.quasis.forEach((quasi, index) => {
         pushQuasiSource(quasi, index, node.quasis.length, sources);
@@ -73,6 +107,8 @@ function walk(
       return;
     case 'CallExpression':
       if (isClassCall(node, ctx.calleeFunctions)) {
+        // The CallExpression visitor skips calls collected here, so each is reported once.
+        ctx.walkedClassCalls.add(node);
         for (const arg of node.arguments) {
           walk(arg, ctx, sources);
         }
@@ -81,28 +117,6 @@ function walk(
     default:
       return;
   }
-}
-
-function pushLiteralSource(
-  node: ESTree.Literal,
-  value: string,
-  ctx: CanonicalizationContext,
-  sources: ClassSource[],
-): void {
-  const classes = splitClasses(value);
-  const range = node.range;
-  if (classes.length === 0 || !range) {
-    return;
-  }
-  sources.push({
-    reportNode: node as Rule.Node,
-    classes,
-    fixRange: range,
-    buildFix: (fixedClasses) => {
-      const quoteChar = getQuoteChar(ctx.sourceText, range[0], range[1]);
-      return `${quoteChar}${joinClasses(fixedClasses)}${quoteChar}`;
-    },
-  });
 }
 
 /**
@@ -116,6 +130,8 @@ function pushQuasiSource(
   sources: ClassSource[],
 ): void {
   const { raw, cooked } = quasi.value;
+  // An escape sequence such as `\n` makes the source text differ from the
+  // classes it spells, so token offsets in `raw` would not match the classes.
   if (!quasi.range || raw !== cooked) {
     return;
   }
@@ -138,12 +154,13 @@ function pushQuasiSource(
     classes: tokens.map((match) => match[0]),
     fixRange: [contentStart, contentStart + raw.length],
     buildFix: (fixedClasses) => {
-      let text = raw;
-      for (let i = tokens.length - 1; i >= 0; i -= 1) {
-        const start = tokens[i].index;
-        text = text.slice(0, start) + fixedClasses[i] + text.slice(start + tokens[i][0].length);
-      }
-      return text;
+      let text = '';
+      let cursor = 0;
+      tokens.forEach((match, i) => {
+        text += raw.slice(cursor, match.index) + fixedClasses[i];
+        cursor = match.index + match[0].length;
+      });
+      return text + raw.slice(cursor);
     },
   });
 }

@@ -1,11 +1,10 @@
 import type { Rule } from 'eslint';
+import type * as ESTree from 'estree';
 import { getSourceCode } from './context.js';
-import { collectClassExpressionSources } from './class-expression.js';
 import {
-  getQuoteChar,
-  joinClasses,
-  splitClasses,
-} from './estree.js';
+  buildQuotedLiteralSource,
+  collectClassExpressionSources,
+} from './class-expression.js';
 import type { CanonicalizationContext, ClassSource } from './types.js';
 
 interface VueParserServices {
@@ -15,7 +14,7 @@ interface VueParserServices {
   ) => Rule.RuleListener;
 }
 
-export function isVueClassAttribute(node: unknown): boolean {
+function isVueClassAttribute(node: unknown): boolean {
   const attr = node as {
     type?: string;
     directive?: boolean;
@@ -82,11 +81,22 @@ export function collectVueClassAttributeSources(
 
   const attr = node as {
     directive?: boolean;
-    value?: { type?: string; expression?: unknown; value?: string; range?: [number, number] };
+    value?: {
+      type?: string;
+      expression?: ESTree.Node;
+      value?: string;
+      range?: [number, number];
+    };
   };
 
   if (!attr.directive && attr.value?.type === 'VLiteral') {
-    return buildStaticVueLiteralSource(node, attr.value, ctx.sourceText);
+    const source = buildQuotedLiteralSource(
+      node as Rule.Node,
+      attr.value.value ?? '',
+      attr.value.range,
+      ctx.sourceText,
+    );
+    return source === null ? [] : [source];
   }
 
   if (attr.directive && attr.value?.type === 'VExpressionContainer') {
@@ -94,35 +104,4 @@ export function collectVueClassAttributeSources(
   }
 
   return [];
-}
-
-function buildStaticVueLiteralSource(
-  attrNode: unknown,
-  valueNode: { value?: string; range?: [number, number] },
-  sourceText: string,
-): ClassSource[] {
-  if (!valueNode.range) {
-    return [];
-  }
-
-  const classes = splitClasses(valueNode.value ?? '');
-  if (classes.length === 0) {
-    return [];
-  }
-
-  return [
-    {
-      reportNode: attrNode as Rule.Node,
-      classes,
-      fixRange: valueNode.range,
-      buildFix: (fixedClasses) => {
-        const quoteChar = getQuoteChar(
-          sourceText,
-          valueNode.range![0],
-          valueNode.range![1],
-        );
-        return `${quoteChar}${joinClasses(fixedClasses)}${quoteChar}`;
-      },
-    },
-  ];
 }

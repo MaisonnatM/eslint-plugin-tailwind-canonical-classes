@@ -1,3 +1,4 @@
+import type * as ESTree from 'estree';
 import { collectClassExpressionSources } from './class-expression.js';
 import { joinClasses, splitClasses } from './estree.js';
 import type { CanonicalizationContext, ClassSource } from './types.js';
@@ -35,7 +36,7 @@ export function collectSvelteClassAttributeSources(
       type?: string;
       value?: string;
       range?: [number, number];
-      expression?: unknown;
+      expression?: ESTree.Node;
     };
     if (part.type === 'SvelteLiteral') {
       literalRun.push(part);

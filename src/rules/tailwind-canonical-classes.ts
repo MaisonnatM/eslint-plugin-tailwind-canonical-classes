@@ -1,11 +1,11 @@
 import type { Rule } from 'eslint';
+import {
+  collectClassExpressionSources,
+  isClassCall,
+} from './class-sources/class-expression.js';
 import { getSourceCode, setupRuleContext } from './class-sources/context.js';
 import { collectJsxClassNameSources } from './class-sources/jsx.js';
 import { createClassSourceReporter } from './class-sources/pipeline.js';
-import {
-  collectScriptCallExpressionSources,
-  isCollectedByAncestor,
-} from './class-sources/script.js';
 import { collectSvelteClassAttributeSources } from './class-sources/svelte.js';
 import {
   collectVueClassAttributeSources,
@@ -96,15 +96,14 @@ const rule: Rule.RuleModule = {
 
     const scriptVisitor: Rule.RuleListener = {
       CallExpression(node) {
-        const sources = collectScriptCallExpressionSources(node, ctx);
         if (
-          sources.length === 0 ||
-          isCollectedByAncestor(node, sourceCode, ctx.calleeFunctions)
+          ctx.walkedClassCalls.has(node) ||
+          !isClassCall(node, ctx.calleeFunctions)
         ) {
           return;
         }
 
-        reportClassSources(sources);
+        reportClassSources(collectClassExpressionSources(node, ctx));
       },
     };
 
