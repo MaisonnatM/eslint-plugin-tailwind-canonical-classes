@@ -1,71 +1,58 @@
 import type { Rule } from 'eslint';
 import type { CanonicalizationContext, ClassSource } from './types.js';
 
-const failedContexts = new WeakSet<CanonicalizationContext>();
-
-export function reportClassSources(
+/**
+ * Returns a reporter for one linted file. After Tailwind fails once, it
+ * reports that failure and skips the file's remaining class sources.
+ */
+export function createClassSourceReporter(
   context: Rule.RuleContext,
-  sources: ClassSource[],
   ctx: CanonicalizationContext,
-): void {
-  for (const source of sources) {
-    if (failedContexts.has(ctx)) {
+): (sources: ClassSource[]) => void {
+  let failed = false;
+
+  return (sources) => {
+    if (failed) {
       return;
     }
 
-    let canonicalized: string[];
-    try {
-      canonicalized = ctx.canonicalizeClasses(source.classes);
-    } catch (error) {
-      failedContexts.add(ctx);
-      context.report({
-        node: source.reportNode,
-        messageId: 'canonicalizeFailed',
-        data: {
-          path: ctx.cssPath,
-          error: error instanceof Error ? error.message : String(error),
-        },
-      });
-      return;
-    }
-
-    const errors: Array<{
-      original: string;
-      canonical: string;
-      index: number;
-    }> = [];
-
-    source.classes.forEach((className, index) => {
-      const canonical = canonicalized[index];
-      if (canonical !== className) {
-        errors.push({ original: className, canonical, index });
+    for (const source of sources) {
+      let canonicalized: string[];
+      try {
+        canonicalized = ctx.canonicalizeClasses(source.classes);
+      } catch (error) {
+        failed = true;
+        context.report({
+          node: source.reportNode,
+          messageId: 'canonicalizeFailed',
+          data: {
+            path: ctx.cssPath,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        });
+        return;
       }
-    });
 
-    if (errors.length === 0) {
-      continue;
-    }
+      let fixAttached = false;
 
-    const fixedClasses = [...source.classes];
-    errors.forEach((error) => {
-      fixedClasses[error.index] = error.canonical;
-    });
-    const replacementText = source.buildFix(fixedClasses);
-
-    errors.forEach((error, errorIndex) => {
-      context.report({
-        node: source.reportNode,
-        messageId: 'nonCanonical',
-        data: {
-          original: error.original,
-          canonical: error.canonical,
-        },
-        fix:
-          errorIndex === 0
-            ? (fixer) =>
-                fixer.replaceTextRange(source.fixRange, replacementText)
-            : undefined,
+      canonicalized.forEach((canonical, index) => {
+        const original = source.classes[index];
+        if (canonical === original) {
+          return;
+        }
+        let fix: Rule.ReportFixer | undefined;
+        if (!fixAttached) {
+          const replacementText = source.buildFix(canonicalized);
+          fix = (fixer) => fixer.replaceTextRange(source.fixRange, replacementText);
+          fixAttached = true;
+        }
+        context.report({
+          node: source.reportNode,
+          messageId: 'nonCanonical',
+          data: { original, canonical },
+          fix,
+        });
       });
-    });
-  }
+    }
+  };
 }

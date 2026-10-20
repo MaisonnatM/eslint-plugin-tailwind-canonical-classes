@@ -33,15 +33,12 @@ describe('canonical cache', () => {
       .map((message) => message.message);
 
   it('picks up edits to an imported theme within one process', () => {
+    const code = '<div className="w-[16px]" />';
     fs.writeFileSync(themePath, '@theme { --spacing: 0.25rem; }\n');
-    expect(lint('<div className="w-[16px]" />', { cssPath })).toEqual([
-      "Class 'w-[16px]' should be 'w-4'",
-    ]);
+    expect(lint(code, { cssPath })).toEqual(["Class 'w-[16px]' should be 'w-4'"]);
 
     fs.writeFileSync(themePath, '@theme { --spacing: 0.5rem;  }\n');
-    expect(lint('<div className="w-[16px]" />', { cssPath })).toEqual([
-      "Class 'w-[16px]' should be 'w-2'",
-    ]);
+    expect(lint(code, { cssPath })).toEqual(["Class 'w-[16px]' should be 'w-2'"]);
   });
 
   it('keeps canonical forms for each rootFontSize apart', () => {
