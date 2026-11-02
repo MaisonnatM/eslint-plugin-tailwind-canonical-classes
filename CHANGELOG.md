@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.6.0...v1.6.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* keep cached classes when Tailwind reports dependencies in a different order ([#27](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/27)) ([09e4803](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/09e480356a42d7060125e1ce73e09e66d737e23f)), closes [#26](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/26)
+
 # [1.6.0](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.5.0...v1.6.0) (2026-10-20)
 
 
