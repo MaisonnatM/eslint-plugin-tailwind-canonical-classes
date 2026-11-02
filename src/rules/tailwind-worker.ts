@@ -40,7 +40,8 @@ async function loadStylesheet(cssPath: string): Promise<LoadedStylesheet> {
   const dependencies: string[] = [];
   // Only compile() reports the files Tailwind reads; @tailwindcss/node exposes no design system loader that does.
   await compile(css, { base, from: cssPath, onDependency: (file) => dependencies.push(file) });
-  const files = [cssPath, enginePackageJson, ...new Set(dependencies)];
+  // Plugins load in parallel, so dependencies arrive in a different order between runs; sorting keeps the cache key stable.
+  const files = [cssPath, enginePackageJson, ...[...new Set(dependencies)].sort()];
   return {
     files,
     stamp: statStamp(files),

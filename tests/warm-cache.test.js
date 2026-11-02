@@ -45,4 +45,19 @@ describe('warm canonical cache', () => {
     expect(canonicalize(['h-8'])).toEqual(['h-8']);
     expect(mockCanonicalizeSync).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps cached classes when the stylesheet gains a dependency', async () => {
+    const plugin = path.join(cacheDir, 'plugin.js');
+    fs.writeFileSync(plugin, 'export default {};\n');
+    const answerWithFiles = (dependencies) => (cssPath, candidates) => ({
+      canonical: candidates.map((candidate) => (candidate === 'w-[16px]' ? 'w-4' : candidate)),
+      files: [cssPath, ...dependencies],
+    });
+
+    mockCanonicalizeSync.mockImplementation(answerWithFiles([]));
+    (await freshCanonicalizer(24))(['mt-2']);
+
+    mockCanonicalizeSync.mockImplementation(answerWithFiles([plugin]));
+    expect((await freshCanonicalizer(24))(['mt-2', 'w-[16px]'])).toEqual(['mt-2', 'w-4']);
+  });
 });

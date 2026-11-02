@@ -142,16 +142,19 @@ export function createClassCanonicalizer(
   stylesheets.set(id, stylesheet);
 
   return (candidates) => {
-    const missing = [...new Set(candidates.filter((candidate) => !stylesheet.table.has(candidate)))];
-    if (missing.length > 0) {
+    if (candidates.some((candidate) => !stylesheet.table.has(candidate))) {
       canonicalizeSync ??= createSyncFn<CanonicalizeInWorker>(workerPath);
-      const { canonical, files } = canonicalizeSync(cssPath, missing, { rem });
+      // Asks for every candidate, not just the misses: a new file list opens a table that may lack the earlier hits.
+      const unique = [...new Set(candidates)];
+      const { canonical, files } = canonicalizeSync(cssPath, unique, { rem });
       if (files.join('\0') !== stylesheet.files.join('\0')) {
         stylesheet = openStylesheet(cacheDir, files, rem);
         stylesheets.set(id, stylesheet);
         writeManifest(cacheDir, cssPath, files);
       }
-      const answers = missing.map((candidate, index): [string, string] => [candidate, canonical[index]]);
+      const answers = unique
+        .map((candidate, index): [string, string] => [candidate, canonical[index]])
+        .filter(([candidate]) => !stylesheet.table.has(candidate));
       for (const [candidate, value] of answers) {
         stylesheet.table.set(candidate, value);
       }
