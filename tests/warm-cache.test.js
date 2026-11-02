@@ -46,21 +46,18 @@ describe('warm canonical cache', () => {
     expect(mockCanonicalizeSync).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps cached classes when Tailwind reports its files in a different order', async () => {
-    const pluginA = path.join(cacheDir, 'plugin-a.js');
-    const pluginB = path.join(cacheDir, 'plugin-b.js');
-    fs.writeFileSync(pluginA, 'export default {};\n');
-    fs.writeFileSync(pluginB, 'export default {};\n');
-    // Plugins load in parallel, so the order Tailwind reports them in can change between runs.
-    const answerWithFiles = (plugins) => (cssPath, candidates) => ({
+  it('keeps cached classes when the stylesheet gains a dependency', async () => {
+    const plugin = path.join(cacheDir, 'plugin.js');
+    fs.writeFileSync(plugin, 'export default {};\n');
+    const answerWithFiles = (dependencies) => (cssPath, candidates) => ({
       canonical: candidates.map((candidate) => (candidate === 'w-[16px]' ? 'w-4' : candidate)),
-      files: [cssPath, ...plugins],
+      files: [cssPath, ...dependencies],
     });
 
-    mockCanonicalizeSync.mockImplementation(answerWithFiles([pluginA, pluginB]));
+    mockCanonicalizeSync.mockImplementation(answerWithFiles([]));
     (await freshCanonicalizer(24))(['mt-2']);
 
-    mockCanonicalizeSync.mockImplementation(answerWithFiles([pluginB, pluginA]));
+    mockCanonicalizeSync.mockImplementation(answerWithFiles([plugin]));
     expect((await freshCanonicalizer(24))(['mt-2', 'w-[16px]'])).toEqual(['mt-2', 'w-4']);
   });
 });
