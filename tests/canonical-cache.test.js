@@ -63,8 +63,10 @@ describe('canonical cache', () => {
          createClassCanonicalizer(${JSON.stringify(cacheDir)}, ${JSON.stringify(fixtureCssPath)}, 16)(['w-[8px]']);
          process.exit(0);`,
       ],
-      { encoding: 'utf-8' },
+      // spawnSync blocks vitest's own timeout, so a stuck child must be killed here.
+      { encoding: 'utf-8', timeout: 20000 },
     );
+    expect(other.error).toBeUndefined();
     expect(other.stderr).toBe('');
 
     expect(canonicalize(['w-[24px]'])).toEqual(['w-6']);
