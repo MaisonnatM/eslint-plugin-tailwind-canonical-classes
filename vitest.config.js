@@ -6,7 +6,6 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.js'],
     setupFiles: ['tests/setup-cache-dir.js'],
-    timeout: 10000,
   },
   esbuild: {
     target: 'node18',
