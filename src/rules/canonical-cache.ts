@@ -11,6 +11,9 @@ import pkg from '../../package.json' with { type: 'json' };
 const workerPath = fileURLToPath(new URL('./tailwind-worker.js', import.meta.url));
 // The worker reports the engine's package.json among its files, so only this plugin's version is keyed here.
 const { version: pluginVersion } = pkg;
+// synckit waits forever unless SYNCKIT_TIMEOUT is set, so a stalled stylesheet would freeze ESLint.
+const { SYNCKIT_TIMEOUT } = process.env;
+const workerTimeout = SYNCKIT_TIMEOUT ? Number(SYNCKIT_TIMEOUT) : 30_000;
 
 type CanonicalizeSync = (
   ...args: Parameters<CanonicalizeInWorker>
@@ -18,6 +21,20 @@ type CanonicalizeSync = (
 
 // Spawned on the first cache miss so fully cached runs never start Tailwind.
 let canonicalizeSync: CanonicalizeSync | undefined;
+
+function callWorker(...args: Parameters<CanonicalizeInWorker>): CanonicalizeResult {
+  canonicalizeSync ??= createSyncFn<CanonicalizeInWorker>(workerPath, { timeout: workerTimeout });
+  try {
+    return canonicalizeSync(...args);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Atomics.wait() failed: timed-out')) {
+      throw new Error(
+        `no answer within ${workerTimeout / 1000} s; set SYNCKIT_TIMEOUT (milliseconds) to wait longer`,
+      );
+    }
+    throw error;
+  }
+}
 
 /**
  * Canonical forms for one stylesheet and root font size, valid while every
@@ -143,10 +160,9 @@ export function createClassCanonicalizer(
 
   return (candidates) => {
     if (candidates.some((candidate) => !stylesheet.table.has(candidate))) {
-      canonicalizeSync ??= createSyncFn<CanonicalizeInWorker>(workerPath);
       // Asks for every candidate, not just the misses: a new file list opens a table that may lack the earlier hits.
       const unique = [...new Set(candidates)];
-      const { canonical, files } = canonicalizeSync(cssPath, unique, { rem });
+      const { canonical, files } = callWorker(cssPath, unique, { rem });
       if (files.join('\0') !== stylesheet.files.join('\0')) {
         stylesheet = openStylesheet(cacheDir, files, rem);
         stylesheets.set(id, stylesheet);

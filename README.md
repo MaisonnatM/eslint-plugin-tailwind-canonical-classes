@@ -433,6 +433,7 @@ Set `TAILWIND_CANONICAL_CLASSES_CACHE_DIR` to store the cache somewhere else, fo
 **Solutions**:
 - Tailwind failed to load your CSS file. The message ends with Tailwind's own error.
 - Fix the import, plugin, or syntax it names, for example a package that is not installed in this project
+- If the error is `no answer within 30 s`, Tailwind stalled while loading the stylesheet, for example in a plugin that never finishes loading. The plugin stops waiting after 30 s; set `SYNCKIT_TIMEOUT` to a number of milliseconds to wait longer.
 
 ### Auto-fix not working
 
