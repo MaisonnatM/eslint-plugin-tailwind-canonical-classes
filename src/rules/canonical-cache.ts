@@ -11,10 +11,11 @@ import pkg from '../../package.json' with { type: 'json' };
 const workerPath = fileURLToPath(new URL('./tailwind-worker.js', import.meta.url));
 // The worker reports the engine's package.json among its files, so only this plugin's version is keyed here.
 const { version: pluginVersion } = pkg;
-// synckit waits forever unless SYNCKIT_TIMEOUT is set, so a stalled stylesheet would freeze ESLint.
-const { SYNCKIT_TIMEOUT } = process.env;
-const workerTimeout = SYNCKIT_TIMEOUT ? Number(SYNCKIT_TIMEOUT) : 30_000;
-const timeoutMessage = `no answer within ${workerTimeout / 1000} s; set SYNCKIT_TIMEOUT (milliseconds) to wait longer`;
+// synckit waits forever by default, so a stalled stylesheet would freeze ESLint. Passing `timeout` also overrides synckit's own SYNCKIT_TIMEOUT.
+const requestedTimeout = Number(process.env.TAILWIND_CANONICAL_CLASSES_TIMEOUT);
+const workerTimeout =
+  Number.isFinite(requestedTimeout) && requestedTimeout > 0 ? requestedTimeout : 30_000;
+const timeoutMessage = `no answer within ${workerTimeout / 1000} s; set TAILWIND_CANONICAL_CLASSES_TIMEOUT (milliseconds) to wait longer`;
 
 type CanonicalizeSync = (
   ...args: Parameters<CanonicalizeInWorker>
@@ -23,25 +24,9 @@ type CanonicalizeSync = (
 // Spawned on the first cache miss so fully cached runs never start Tailwind.
 let canonicalizeSync: CanonicalizeSync | undefined;
 
-// The worker keeps answering other stylesheets after one stalls, but asking the stalled one again stalls again.
-// Keyed by stylesheet with its stamp at the stall, so saving the stylesheet retries.
-const stalls = new Map<string, string>();
-
-function callWorker(stamp: string, ...args: Parameters<CanonicalizeInWorker>): CanonicalizeResult {
-  const [cssPath] = args;
-  if (stalls.get(cssPath) === stamp) {
-    throw new Error(timeoutMessage);
-  }
-  canonicalizeSync ??= createSyncFn<CanonicalizeInWorker>(workerPath, { timeout: workerTimeout });
-  try {
-    return canonicalizeSync(...args);
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('Atomics.wait() failed: timed-out')) {
-      stalls.set(cssPath, stamp);
-      throw new Error(timeoutMessage);
-    }
-    throw error;
-  }
+/** Mirrors the error synckit 0.11 throws when its wait runs out (`Atomics.wait() failed: timed-out` in synckit/lib/helpers.js). */
+function isSynckitTimeout(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('Atomics.wait() failed: timed-out');
 }
 
 /**
@@ -53,6 +38,8 @@ interface StylesheetCache {
   stamp: string;
   tablePath: string;
   table: Map<string, string>;
+  /** The worker timed out on these files. Asking again would stall again, so a changed file reopens the entry instead. */
+  stalled?: true;
 }
 
 const stylesheets = new Map<string, StylesheetCache>();
@@ -168,9 +155,23 @@ export function createClassCanonicalizer(
 
   return (candidates) => {
     if (candidates.some((candidate) => !stylesheet.table.has(candidate))) {
+      if (stylesheet.stalled) {
+        throw new Error(timeoutMessage);
+      }
       // Asks for every candidate, not just the misses: a new file list opens a table that may lack the earlier hits.
       const unique = [...new Set(candidates)];
-      const { canonical, files } = callWorker(stylesheet.stamp, cssPath, unique, { rem });
+      canonicalizeSync ??= createSyncFn<CanonicalizeInWorker>(workerPath, { timeout: workerTimeout });
+      let answer: CanonicalizeResult;
+      try {
+        answer = canonicalizeSync(cssPath, unique, { rem });
+      } catch (error) {
+        if (isSynckitTimeout(error)) {
+          stylesheet.stalled = true;
+          throw new Error(timeoutMessage);
+        }
+        throw error;
+      }
+      const { canonical, files } = answer;
       if (files.join('\0') !== stylesheet.files.join('\0')) {
         stylesheet = openStylesheet(cacheDir, files, rem);
         stylesheets.set(id, stylesheet);
