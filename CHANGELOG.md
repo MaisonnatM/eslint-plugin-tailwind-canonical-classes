@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.6.1...v1.6.2) (2026-11-04)
+
+
+### Bug Fixes
+
+* stop waiting on a stalled Tailwind worker after 30 s ([#30](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/issues/30)) ([2f52ed2](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/commit/2f52ed25ea52bec4ec12643e3e4b254f51d1c9bc))
+
 ## [1.6.1](https://github.com/MaisonnatM/eslint-plugin-tailwind-canonical-classes/compare/v1.6.0...v1.6.1) (2026-11-02)
 
 
